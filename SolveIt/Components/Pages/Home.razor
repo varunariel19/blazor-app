@@ -1,0 +1,299 @@
+﻿@page "/"
+@using SolveIt.Services
+@inject SolveIt.Services.QuestionService QuestionService
+@inject SolveIt.UI_state.UiStateService UiState
+@inject NavigationManager NavManager
+@inject IJSRuntime JSRuntime
+@implements IDisposable
+
+<PageTitle>SolveIt — Q&A for Developers</PageTitle>
+
+<div class="feed-header">
+    <div>
+        <h1 class="feed-title">All Questions</h1>
+        <p class="feed-subtitle">128 questions across all topics</p>
+    </div>
+
+    <div class="feed-controls">
+        <div class="filter-tabs">
+            <button class="filter-tab active">Newest</button>
+            <button class="filter-tab">Active</button>
+            <button class="filter-tab">Unanswered</button>
+            <button class="filter-tab">Hot</button>
+        </div>
+    </div>
+</div>
+
+@if (UiState.ShowAskForm)
+{
+    <div class="ask-form-card">
+        <h3 class="ask-form-title">Post a New Question</h3>
+
+        <div class="form-group">
+            <label>Title</label>
+            <input type="text" value="@Title" @oninput="HandleTitleChange" class="form-input"
+                   placeholder="e.g. How to use generics in C#?" />
+        </div>
+
+        <div class="form-group">
+            <label>Question Description</label>
+            <div id="quill-desc" class="rich-editor-container"></div>
+        </div>
+
+        <div class="form-group">
+            <label>Your Solution</label>
+            @if (!ShowSolutionEditor)
+            {
+                <button class="btn-add-solution" @onclick="ShowSolution">+ Add Your Solution</button>
+            }
+            else
+            {
+                <div class="solution-header">
+                    <span class="solution-label"></span>
+                    <button class="solution-close" @onclick="HideSolution">✕</button>
+                </div>
+                <div id="quill-solution" class="rich-editor-container"></div>
+            }
+        </div>
+
+        <div class="form-group">
+            <label>Tags</label>
+            <div class="tag-input-wrapper">
+                @foreach (var tag in SelectedTags)
+                {
+                    <span class="tag-pill">
+                        #@tag
+                        <span class="tag-remove" @onclick="() => RemoveTag(tag)">×</span>
+                    </span>
+                }
+                <input type="text" @bind="CurrentTagInput" @bind:event="oninput" @onkeyup="HandleTagInput"
+                       placeholder="Add tags (space to separate)..." class="tag-inner-input" />
+            </div>
+            <small class="form-help">Type a tag and press space</small>
+        </div>
+
+        <div class="form-actions">
+            <button class="btn-cancel" @onclick="CancelForm">Cancel</button>
+            <button class="btn-submit" @onclick="HandlePostQuestion">Post Question</button>
+        </div>
+    </div>
+}
+
+
+
+<div class="questions-feed">
+    @if (Questions.Count == 0)
+    {
+        <p style="color:#666;text-align:center;padding:2rem;">No questions yet. Be the first to ask!</p>
+    }
+    @foreach (Question q in Questions)
+    {
+        <div class="question-card" style="flex-direction:column;gap:12px;">
+            <div class="q-body">
+                <h2 class="q-title">
+                    <a href="/question/@q.QuestionId">@q.Title</a>
+                </h2>
+                <div class="q-tags" style="margin-bottom:10px;">
+                    @foreach (var tag in q.QuestionTags)
+                    {
+                        <span class="tag">@tag.TagName</span>
+                    }
+                </div>
+                <div class="q-meta">
+                    <div class="q-author">
+                        <img src="@(q.User?.AvatarUrl ?? "https://api.dicebear.com/7.x/shapes/svg?seed=default")"
+                             class="author-avatar" />
+                        <span class="author-name">@(q.User?.DisplayName ?? "Unknown")</span>
+                    </div>
+                    <span class="q-time">asked @TimeAgo(q.CreatedAt)</span>
+                </div>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:16px;padding-top:10px;border-top:1px solid var(--border);">
+                <div style="display:flex;align-items:center;gap:6px;">
+                    <button class="vote-btn" style="font-size:15px;">▲</button>
+                    <span
+                    style="font-size:14px;font-weight:600;color:var(--text-secondary);font-family:'JetBrains Mono',monospace;">@q.VoteCount</span>
+                    <button class="vote-btn" style="font-size:15px;">▼</button>
+                    <span style="font-size:13px;color:var(--text-muted);margin-left:2px;">votes</span>
+                </div>
+
+                <div style="display:flex;align-items:center;gap:6px;">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                    </svg>
+                    <span
+                    style="font-size:14px;font-weight:600;color:var(--text-secondary);font-family:'JetBrains Mono',monospace;">@q.SolutionCount</span>
+                    <span style="font-size:13px;color:var(--text-muted);">answers</span>
+                </div>
+
+                <div style="display:flex;align-items:center;gap:6px;">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                        <circle cx="12" cy="12" r="3" />
+                    </svg>
+                    <span
+                    style="font-size:14px;font-weight:600;color:var(--text-secondary);font-family:'JetBrains Mono',monospace;">@q.ViewCount</span>
+                    <span style="font-size:13px;color:var(--text-muted);">views</span>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+
+    public class ImageDto
+    {
+        public int Id { get; set; }
+        public string Base64 { get; set; }
+    }
+
+    public class ImageReplacement
+    {
+        public int Id { get; set; }
+        public string Url { get; set; }
+    }
+
+    [CascadingParameter] UserStateService? UserState { get; set; }
+
+    private List<string> SelectedTags = new();
+    private List<Question> Questions = new();
+    private bool ShowSolutionEditor = false;
+    private string Title { get; set; } = "";
+    private string CurrentTagInput = "";
+    private string DescriptionHtml { get; set; } = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        UiState.OnChange += HandleChange;
+        Questions = await QuestionService.GetAllQuestionsAsync();
+    }
+
+    private string TimeAgo(DateTime dt)
+    {
+        var diff = DateTime.UtcNow - dt;
+        if (diff.TotalMinutes < 1) return "just now";
+        if (diff.TotalHours < 1) return $"{(int)diff.TotalMinutes}m ago";
+        if (diff.TotalDays < 1) return $"{(int)diff.TotalHours}h ago";
+        if (diff.TotalDays < 30) return $"{(int)diff.TotalDays}d ago";
+        return dt.ToString("MMM dd, yyyy");
+    }
+
+    private async Task ShowSolution()
+    {
+        ShowSolutionEditor = true;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HideSolution()
+    {
+        await JSRuntime.InvokeVoidAsync("QuillManager.destroy", "quill-solution");
+        ShowSolutionEditor = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async void HandleChange() => await InvokeAsync(StateHasChanged);
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (UiState.ShowAskForm)
+        {
+            await JSRuntime.InvokeVoidAsync("QuillManager.init", "quill-desc");
+            if (ShowSolutionEditor)
+                await JSRuntime.InvokeVoidAsync("QuillManager.init", "quill-solution");
+        }
+    }
+
+    private void HandleTagInput(KeyboardEventArgs e)
+    {
+        if (e.Key == " " || e.Key == "Enter")
+        {
+            var tag = CurrentTagInput.Trim().Replace("#", "");
+            if (!string.IsNullOrWhiteSpace(tag) && !SelectedTags.Contains(tag))
+                SelectedTags.Add(tag.ToLower());
+            CurrentTagInput = "";
+        }
+    }
+
+    private void RemoveTag(string tag) => SelectedTags.Remove(tag);
+
+    private void HandleTitleChange(ChangeEventArgs e)
+    {
+        Title = e.Value?.ToString() ?? "";
+    }
+
+    private async Task CancelForm()
+    {
+        await JSRuntime.InvokeVoidAsync("QuillManager.destroy", "quill-desc");
+        await JSRuntime.InvokeVoidAsync("QuillManager.destroy", "quill-solution");
+        UiState.HideAskForm();
+    }
+
+    public void Dispose()
+    {
+        UiState.OnChange -= HandleChange;
+    }
+
+    private async Task HandlePostQuestion()
+    {
+        try
+        {
+            string? cleanHtml = await JSRuntime.InvokeAsync<string>(
+                identifier: "QuillManager.uploadToCloud"
+            );
+
+            if (string.IsNullOrWhiteSpace(cleanHtml))
+            {
+                return;
+            }
+
+            DescriptionHtml = cleanHtml;
+
+            string? solutionBody = null;
+
+            if (ShowSolutionEditor)
+            {
+                solutionBody = await JSRuntime.InvokeAsync<string>(
+                    identifier: "QuillManager.getContent",
+                    "quill-solution"
+                );
+            }
+
+            Question? newQuestion = new Question
+            {
+                Title = Title,
+                Body = DescriptionHtml,
+                UserId = UserState!.CurrentUser!.Id,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            bool success = await QuestionService.CreateQuestionWithOptionalSolution(
+                newQuestion,
+                solutionBody,
+                SelectedTags
+            );
+
+            if (success)
+            {
+                Title = "";
+                SelectedTags.Clear();
+                DescriptionHtml = "";
+
+                await JSRuntime.InvokeVoidAsync(identifier: "QuillManager.destroy", "quill-desc");
+                await JSRuntime.InvokeVoidAsync(identifier: "QuillManager.destroy", "quill-solution");
+
+                UiState.HideAskForm();
+
+                Questions = await QuestionService.GetAllQuestionsAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
+    }
+
+
+
+}

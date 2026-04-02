@@ -1,0 +1,1136 @@
+﻿
+:root {
+    --bg: #0c0d10;
+    --surface: #13151c;
+    --surface-2: #1c1f2b;
+    --surface-3: #252839;
+    --border: rgba(255,255,255,0.07);
+    --border-2: rgba(255,255,255,0.12);
+    --accent: #f0a500;
+    --accent-dim: rgba(240,165,0,0.15);
+    --accent-glow: rgba(240,165,0,0.35);
+    --green: #34d399;
+    --green-dim: rgba(52,211,153,0.12);
+    --red: #f87171;
+    --red-dim: rgba(248,113,113,0.12);
+    --purple: #a78bfa;
+    --purple-dim: rgba(167,139,250,0.12);
+    --text: #eaedf5;
+    --text-2: #9aa3b8;
+    --text-3: #5d6680;
+    --r: 12px;
+    --r-sm: 8px;
+    --r-xs: 6px;
+    --shadow: 0 8px 40px rgba(0,0,0,0.6);
+    --shadow-sm: 0 2px 12px rgba(0,0,0,0.4);
+    --ease: cubic-bezier(.4,0,.2,1);
+    --font-head: 'Inter', sans-serif;
+    --font-body: 'Arial', sans-serif;
+}
+
+/* ── Reset & base ──────────────────────────────────────────────────────── */
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+body {
+    background: var(--bg);
+}
+
+/* ── Noise overlay ─────────────────────────────────────────────────────── */
+.qv-bg-noise {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+    opacity: 0.025;
+}
+
+/* ── Shell layout ──────────────────────────────────────────────────────── */
+.qv-shell {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 72px 1fr;
+    gap: 0 2rem;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 2.5rem 1.25rem 6rem;
+    font-family: var(--font-body);
+    color: var(--text);
+    font-size: 0.95rem;
+    line-height: 1.7;
+}
+
+/* ── Sidebar ───────────────────────────────────────────────────────────── */
+.qv-sidebar {
+    position: relative;
+}
+
+.qv-sidebar-sticky {
+    position: sticky;
+    top: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.25rem;
+}
+
+/* Vote block */
+.qv-vote-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 0.75rem 0.6rem;
+    width: 100%;
+}
+
+.qv-upvote {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border-2);
+    background: var(--surface-2);
+    color: var(--text-2);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s var(--ease);
+}
+
+    .qv-upvote svg {
+        width: 18px;
+        height: 18px;
+    }
+
+    .qv-upvote:hover:not(:disabled) {
+        border-color: var(--accent);
+        color: var(--accent);
+        background: var(--accent-dim);
+        box-shadow: 0 0 16px var(--accent-glow);
+        transform: translateY(-2px);
+    }
+
+.qv-upvote--active {
+    border-color: var(--accent) !important;
+    color: var(--accent) !important;
+    background: var(--accent-dim) !important;
+}
+
+.qv-upvote--locked {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.qv-vote-num {
+    font-family: var(--font-head);
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+}
+
+.qv-vote-label {
+    font-size: 0.68rem;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+/* Stat pills */
+.qv-stat-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    width: 100%;
+}
+
+.qv-stat-pill {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-xs);
+    padding: 0.4rem 0.3rem;
+    font-size: 0.78rem;
+    color: var(--text-2);
+}
+
+    .qv-stat-pill svg {
+        width: 12px;
+        height: 12px;
+        flex-shrink: 0;
+    }
+
+/* Jump nav */
+.qv-jump-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    width: 100%;
+}
+
+.qv-jump {
+    display: block;
+    text-align: center;
+    font-size: 0.7rem;
+    font-family: var(--font-head);
+    font-weight: 600;
+    color: var(--text-3);
+    text-decoration: none;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.3rem 0;
+    border-radius: var(--r-xs);
+    transition: color 0.15s, background 0.15s;
+}
+
+    .qv-jump:hover {
+        color: var(--accent);
+        background: var(--accent-dim);
+    }
+
+/* ── Main column ───────────────────────────────────────────────────────── */
+.qv-main {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+/* ── Cover ─────────────────────────────────────────────────────────────── */
+.qv-cover {
+    width: 100%;
+    max-height: 320px;
+    border-radius: var(--r);
+    overflow: hidden;
+    position: relative;
+    box-shadow: var(--shadow);
+}
+
+    .qv-cover img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+
+.qv-cover-fade {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 50%;
+    background: linear-gradient(to top, var(--bg), transparent);
+}
+
+/* ── Question card ─────────────────────────────────────────────────────── */
+.qv-question-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 2rem 2.25rem;
+    box-shadow: var(--shadow);
+    position: relative;
+    overflow: hidden;
+}
+
+    .qv-question-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, var(--accent), transparent);
+    }
+
+/* Tags */
+.qv-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-bottom: 1rem;
+}
+
+.qv-tag {
+    font-size: 0.7rem;
+    font-weight: 700;
+    font-family: var(--font-head);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--tag-color, #f0a500) 12%, transparent);
+    color: var(--tag-color, #f0a500);
+    border: 1px solid color-mix(in srgb, var(--tag-color, #f0a500) 30%, transparent);
+}
+
+.qv-tag--sm {
+    font-size: 0.62rem;
+    padding: 0.15rem 0.45rem;
+}
+
+/* Title */
+.qv-title {
+    font-family: var(--font-head);
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: var(--text);
+    margin: 0 0 1.25rem;
+    line-height: 1.25;
+    letter-spacing: -0.02em;
+}
+
+/* Author row */
+.qv-author-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 1.5rem;
+}
+
+.qv-author-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+}
+
+.qv-author-name {
+    font-weight: 600;
+    font-size: 0.88rem;
+    color: var(--text);
+}
+
+.qv-author-date {
+    font-size: 0.75rem;
+    color: var(--text-3);
+}
+
+.qv-edited-badge {
+    margin-left: auto;
+    font-size: 0.72rem;
+    color: var(--text-3);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+}
+
+/* Avatar */
+.qv-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--av-color, var(--accent));
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-family: var(--font-head);
+    box-shadow: 0 0 0 2px var(--bg), 0 0 0 3px color-mix(in srgb, var(--av-color, var(--accent)) 40%, transparent);
+}
+
+.qv-avatar--sm {
+    width: 28px;
+    height: 28px;
+    font-size: 0.75rem;
+}
+
+.qv-avatar--xs {
+    width: 24px;
+    height: 24px;
+    font-size: 0.65rem;
+}
+
+/* ── Body content (rendered HTML) ──────────────────────────────────────── */
+.qv-body-content {
+    color: var(--text);
+    line-height: 1.85;
+    font-size: 0.95rem;
+    margin-bottom: 0.5rem;
+}
+
+    .qv-body-content h1, .qv-body-content h2, .qv-body-content h3 {
+        font-family: var(--font-head);
+        color: var(--text);
+        margin: 1.5rem 0 0.5rem;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+    }
+
+    .qv-body-content p {
+        margin: 0.75rem 0;
+    }
+
+    .qv-body-content a {
+        color: var(--accent);
+        text-decoration: underline;
+        text-underline-offset: 3px;
+    }
+
+    .qv-body-content pre {
+        background: var(--surface-2);
+        border: 1px solid var(--border-2);
+        border-radius: var(--r-sm);
+        padding: 1rem 1.25rem;
+        overflow-x: auto;
+        font-size: 0.85rem;
+        border-left: 3px solid var(--accent);
+    }
+
+    .qv-body-content code {
+        background: var(--surface-2);
+        color: var(--accent);
+        padding: 0.12em 0.4em;
+        border-radius: 4px;
+        font-size: 0.86em;
+    }
+
+    .qv-body-content pre code {
+        color: var(--text);
+        background: none;
+        padding: 0;
+    }
+
+    .qv-body-content img {
+        max-width: 100%;
+        border-radius: var(--r-sm);
+        margin: 0.75rem 0;
+    }
+
+    .qv-body-content ul, .qv-body-content ol {
+        padding-left: 1.5rem;
+    }
+
+    .qv-body-content li {
+        margin: 0.3rem 0;
+    }
+
+    .qv-body-content blockquote {
+        border-left: 3px solid var(--purple);
+        margin: 1rem 0;
+        padding: 0.5rem 1rem;
+        color: var(--text-2);
+        background: var(--purple-dim);
+        border-radius: 0 var(--r-sm) var(--r-sm) 0;
+    }
+
+/* ── Section layout ────────────────────────────────────────────────────── */
+.qv-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    gap: 0.75rem;
+}
+
+.qv-section-title {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-family: var(--font-head);
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text);
+    margin: 0;
+}
+
+.qv-section-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: var(--r-xs);
+    background: var(--accent-dim);
+    border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: var(--accent);
+}
+
+    .qv-section-icon svg {
+        width: 14px;
+        height: 14px;
+    }
+
+.qv-section-icon--green {
+    background: var(--green-dim);
+    border-color: color-mix(in srgb, var(--green) 30%, transparent);
+    color: var(--green);
+}
+
+.qv-section-icon--purple {
+    background: var(--purple-dim);
+    border-color: color-mix(in srgb, var(--purple) 30%, transparent);
+    color: var(--purple);
+}
+
+.qv-count-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    background: var(--purple-dim);
+    color: var(--purple);
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0 0.4rem;
+}
+
+/* Reveal button */
+.qv-reveal-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.9rem;
+    border-radius: 999px;
+    border: 1px solid var(--border-2);
+    background: var(--surface-2);
+    color: var(--text-2);
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s var(--ease);
+    font-family: var(--font-body);
+}
+
+    .qv-reveal-btn svg {
+        width: 14px;
+        height: 14px;
+        transition: transform 0.25s var(--ease);
+    }
+
+    .qv-reveal-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+        background: var(--accent-dim);
+    }
+
+/* ── Solution cards ────────────────────────────────────────────────────── */
+.qv-solutions-body {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.qv-sol-card {
+    display: grid;
+    grid-template-columns: 56px 1fr;
+    gap: 1rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-sm);
+    transition: border-color 0.2s var(--ease), transform 0.2s var(--ease);
+    animation: fadeSlideIn 0.3s var(--ease) both;
+}
+
+    .qv-sol-card:hover {
+        border-color: var(--border-2);
+        transform: translateY(-1px);
+    }
+
+.qv-sol-card--new {
+    border-color: var(--green) !important;
+    animation: fadeSlideIn 0.35s var(--ease) both;
+}
+
+/* Vote column */
+.qv-sol-vote-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    padding-top: 0.25rem;
+}
+
+.qv-sol-like, .qv-sol-dislike {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border-2);
+    background: var(--surface-2);
+    color: var(--text-3);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.18s var(--ease);
+    font-size: 0.75rem;
+    font-weight: 700;
+    flex-direction: column;
+    gap: 1px;
+}
+
+    .qv-sol-like svg, .qv-sol-dislike svg {
+        width: 13px;
+        height: 13px;
+    }
+
+    .qv-sol-like span, .qv-sol-dislike span {
+        font-size: 0.65rem;
+        line-height: 1;
+    }
+
+    .qv-sol-like:hover:not(:disabled) {
+        border-color: var(--green);
+        color: var(--green);
+        background: var(--green-dim);
+    }
+
+    .qv-sol-dislike:hover:not(:disabled) {
+        border-color: var(--red);
+        color: var(--red);
+        background: var(--red-dim);
+    }
+
+.qv-upvote--locked {
+    opacity: 0.3 !important;
+    cursor: not-allowed !important;
+}
+
+.qv-sol-netvotes {
+    font-family: var(--font-head);
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text-2);
+    line-height: 1;
+}
+
+.qv-sol-content {
+    min-width: 0;
+}
+
+.qv-sol-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+}
+
+/* ── Empty state ───────────────────────────────────────────────────────── */
+.qv-empty-state {
+    background: var(--surface);
+    border: 1px dashed var(--border-2);
+    border-radius: var(--r);
+    padding: 3rem 2rem;
+    text-align: center;
+    color: var(--text-3);
+}
+
+    .qv-empty-state svg {
+        width: 40px;
+        height: 40px;
+        margin-bottom: 0.75rem;
+        color: var(--accent);
+        opacity: 0.5;
+        display: block;
+        margin-inline: auto;
+    }
+
+    .qv-empty-state p {
+        margin: 0;
+        font-size: 0.9rem;
+    }
+
+/* ── Answer editor ─────────────────────────────────────────────────────── */
+.qv-add-solution {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 1.5rem 1.75rem;
+    box-shadow: var(--shadow-sm);
+    position: relative;
+    overflow: hidden;
+}
+
+    .qv-add-solution::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, var(--green), transparent);
+    }
+
+.qv-editor-wrap {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    overflow: hidden;
+    transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease);
+}
+
+    .qv-editor-wrap:focus-within {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px var(--accent-dim);
+    }
+
+.qv-editor-toolbar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.2rem;
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface-3);
+}
+
+.qv-toolbar-group {
+    display: flex;
+    align-items: center;
+    gap: 0.15rem;
+}
+
+.qv-toolbar-sep {
+    width: 1px;
+    height: 18px;
+    background: var(--border-2);
+    margin: 0 0.3rem;
+}
+
+.qv-tb-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--r-xs);
+    border: none;
+    background: transparent;
+    color: var(--text-2);
+    cursor: pointer;
+    font-size: 0.82rem;
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, color 0.15s;
+}
+
+    .qv-tb-btn svg {
+        width: 14px;
+        height: 14px;
+    }
+
+    .qv-tb-btn:hover {
+        background: var(--accent-dim);
+        color: var(--accent);
+    }
+
+.qv-editor {
+    min-height: 180px;
+    padding: 1rem 1.1rem;
+    color: var(--text);
+    font-size: 0.93rem;
+    line-height: 1.8;
+    outline: none;
+    font-family: var(--font-body);
+}
+
+    .qv-editor:empty::before {
+        content: attr(data-placeholder);
+        color: var(--text-3);
+        pointer-events: none;
+    }
+    /* Mirror body-content styles inside editor */
+    .qv-editor h3 {
+        font-family: var(--font-head);
+        font-weight: 700;
+        color: var(--text);
+        margin: 1rem 0 0.4rem;
+    }
+
+    .qv-editor pre {
+        background: var(--surface-3);
+        border-left: 3px solid var(--accent);
+        padding: 0.75rem 1rem;
+        border-radius: var(--r-xs);
+        overflow-x: auto;
+        font-size: 0.85rem;
+    }
+
+    .qv-editor code {
+        background: var(--surface-3);
+        color: var(--accent);
+        padding: 0.1em 0.35em;
+        border-radius: 3px;
+        font-size: 0.85em;
+    }
+
+    .qv-editor blockquote {
+        border-left: 3px solid var(--purple);
+        padding: 0.4rem 0.9rem;
+        color: var(--text-2);
+        background: var(--purple-dim);
+        border-radius: 0 var(--r-xs) var(--r-xs) 0;
+        margin: 0.75rem 0;
+    }
+
+    .qv-editor ul, .qv-editor ol {
+        padding-left: 1.5rem;
+    }
+
+.qv-editor-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.65rem 0.9rem;
+    border-top: 1px solid var(--border);
+    background: var(--surface-3);
+}
+
+.qv-editor-hint {
+    font-size: 0.75rem;
+    color: var(--text-3);
+}
+
+    .qv-editor-hint b {
+        color: var(--text-2);
+        font-weight: 600;
+    }
+
+    .qv-editor-hint i {
+        color: var(--text-2);
+        font-style: italic;
+    }
+
+.qv-post-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.5rem 1.2rem;
+    border-radius: 999px;
+    background: var(--green);
+    color: #0a1a12;
+    border: none;
+    font-weight: 700;
+    font-size: 0.85rem;
+    font-family: var(--font-head);
+    cursor: pointer;
+    transition: background 0.2s, box-shadow 0.2s, transform 0.15s var(--ease);
+}
+
+    .qv-post-btn svg {
+        width: 14px;
+        height: 14px;
+    }
+
+    .qv-post-btn:hover:not(:disabled) {
+        background: color-mix(in srgb, var(--green) 85%, white);
+        box-shadow: 0 0 20px color-mix(in srgb, var(--green) 40%, transparent);
+        transform: translateY(-1px);
+    }
+
+    .qv-post-btn:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+    }
+
+/* ── Login cards ───────────────────────────────────────────────────────── */
+.qv-login-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    background: var(--surface-2);
+    border: 1px dashed var(--border-2);
+    border-radius: var(--r);
+    padding: 1.25rem 1.5rem;
+    color: var(--text-2);
+}
+
+    .qv-login-card svg {
+        width: 28px;
+        height: 28px;
+        color: var(--accent);
+        flex-shrink: 0;
+        margin-top: 2px;
+    }
+
+    .qv-login-card strong {
+        display: block;
+        color: var(--text);
+        font-family: var(--font-head);
+        margin-bottom: 0.3rem;
+    }
+
+    .qv-login-card p {
+        margin: 0;
+        font-size: 0.88rem;
+    }
+
+.qv-login-inline {
+    font-size: 0.85rem;
+    color: var(--text-3);
+    padding: 0.75rem 0;
+}
+
+.qv-link {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+    .qv-link:hover {
+        text-decoration: underline;
+    }
+
+/* ── Comments section ──────────────────────────────────────────────────── */
+.qv-comments-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 1.5rem 1.75rem;
+    box-shadow: var(--shadow-sm);
+    position: relative;
+    overflow: hidden;
+}
+
+    .qv-comments-section::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, var(--purple), transparent);
+    }
+
+.qv-comment-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    margin-bottom: 1.5rem;
+}
+
+.qv-comment {
+    display: flex;
+    gap: 0.75rem;
+    animation: fadeSlideIn 0.25s var(--ease) both;
+}
+
+.qv-comment--new .qv-comment-bubble {
+    border-color: var(--purple);
+}
+
+.qv-comment-bubble {
+    flex: 1;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    padding: 0.7rem 1rem;
+    transition: border-color 0.2s;
+}
+
+.qv-comment-header {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.25rem;
+}
+
+.qv-comment-author {
+    font-weight: 600;
+    font-size: 0.82rem;
+    color: var(--text);
+}
+
+.qv-comment-time {
+    font-size: 0.72rem;
+    color: var(--text-3);
+}
+
+.qv-comment-text {
+    margin: 0;
+    font-size: 0.88rem;
+    color: var(--text-2);
+    line-height: 1.6;
+}
+
+.qv-no-comments {
+    color: var(--text-3);
+    font-size: 0.88rem;
+    padding: 0.5rem 0;
+}
+
+/* Comment form */
+.qv-comment-form {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--border);
+}
+
+.qv-comment-input-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.qv-comment-textarea {
+    width: 100%;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    color: var(--text);
+    font-size: 0.88rem;
+    font-family: var(--font-body);
+    padding: 0.65rem 0.9rem;
+    resize: vertical;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    box-sizing: border-box;
+}
+
+    .qv-comment-textarea:focus {
+        outline: none;
+        border-color: var(--purple);
+        box-shadow: 0 0 0 3px var(--purple-dim);
+    }
+
+    .qv-comment-textarea::placeholder {
+        color: var(--text-3);
+    }
+
+.qv-comment-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.qv-char-count {
+    font-size: 0.72rem;
+    color: var(--text-3);
+}
+
+.qv-comment-submit {
+    padding: 0.42rem 1rem;
+    background: var(--purple);
+    color: #fff;
+    border: none;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    font-family: var(--font-head);
+    cursor: pointer;
+    transition: background 0.2s, box-shadow 0.2s, transform 0.15s var(--ease);
+}
+
+    .qv-comment-submit:hover:not(:disabled) {
+        background: color-mix(in srgb, var(--purple) 85%, white);
+        box-shadow: 0 0 14px color-mix(in srgb, var(--purple) 35%, transparent);
+        transform: translateY(-1px);
+    }
+
+    .qv-comment-submit:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+/* ── Toast ─────────────────────────────────────────────────────────────── */
+.qv-toast {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--surface-2);
+    border: 1px solid var(--border-2);
+    color: var(--text);
+    padding: 0.6rem 1.4rem;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    box-shadow: var(--shadow);
+    opacity: 0;
+    transition: transform 0.3s var(--ease), opacity 0.3s var(--ease);
+    pointer-events: none;
+    z-index: 9999;
+    white-space: nowrap;
+}
+
+.qv-toast--show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+.qv-toast--error {
+    border-color: var(--red);
+    color: var(--red);
+}
+
+/* ── Spinner ───────────────────────────────────────────────────────────── */
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.qv-spin {
+    animation: spin 0.8s linear infinite;
+}
+
+/* ── Animations ────────────────────────────────────────────────────────── */
+@keyframes fadeSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ── Responsive ────────────────────────────────────────────────────────── */
+@media (max-width: 680px) {
+    .qv-shell {
+        grid-template-columns: 1fr;
+        padding: 1.25rem 1rem 5rem;
+    }
+
+    .qv-sidebar {
+        display: none;
+    }
+
+    .qv-question-card {
+        padding: 1.25rem 1.1rem;
+    }
+
+    .qv-title {
+        font-size: 1.35rem;
+    }
+
+    .qv-sol-card {
+        grid-template-columns: 44px 1fr;
+        gap: 0.75rem;
+        padding: 1.1rem;
+    }
+
+    .qv-add-solution, .qv-comments-section {
+        padding: 1.1rem 1rem;
+    }
+
+    .qv-comment-form {
+        flex-direction: column;
+    }
+}

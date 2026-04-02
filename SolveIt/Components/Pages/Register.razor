@@ -1,0 +1,55 @@
+﻿@page "/register"
+@layout SolveIt.Components.Layout.EmptyLayout
+@inject SolveIt.Services.AuthService AuthService
+@inject NavigationManager NavManager
+
+
+<div class="register-box">
+    <EditForm Model="regModel" OnValidSubmit="HandleRegister">
+        <DataAnnotationsValidator />
+
+        <h3 class="auth-title">Create Account</h3>
+        <p class="auth-subtitle">Join the developer community</p>
+
+        <div class="form-group">
+            <label class="form-label">User Name</label>
+            <InputText @bind-Value="regModel.Username" class="form-input" placeholder="e.g. varun joshi" />
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Email</label>
+            <InputText @bind-Value="regModel.Email" class="form-input" placeholder="name@example.com" />
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Password</label>
+            <InputText @bind-Value="regModel.Password" type="password" class="form-input" placeholder="••••••••" />
+        </div>
+
+        <button type="submit" class="btn-submit">Sign Up</button>
+
+        <div class="auth-footer">
+            Already have an account? <a href="/login">Log in</a>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    private RegisterModel regModel = new();
+
+    private async Task HandleRegister()
+    {
+        var result = await AuthService.RegisterAsync(regModel.Email, regModel.Password, regModel.Username);
+        if (result.Succeeded)
+        {
+            NavManager.NavigateTo("/login");
+        }
+    }
+
+    public class RegisterModel
+    {
+        public string Email { get; set; } = "";
+        public string Password { get; set; } = "";
+        public string Username { get; set; } = "";
+    }
+}
