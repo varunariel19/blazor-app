@@ -24,7 +24,10 @@ public class AuthService(UserManager<User> userManager)
     public async Task<IdentityResult> RegisterAsync(string email, string password, string username)
     {
         var displayName = email.Split('@')[0];
-        var avatar = Avatars[Random.Shared.Next(Avatars.Length)];
+        var normalized = (email + username).ToLowerInvariant();
+        var hash = normalized.Aggregate(0, (acc, ch) => acc * 31 + ch);
+        var index = Math.Abs(hash) % Avatars.Length;
+        var avatar = Avatars[index];
 
         var user = new User
         {

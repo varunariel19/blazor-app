@@ -18,12 +18,20 @@ namespace SolveIt.Pages.Questions
 
         public Question Question { get; set; } = null!;
         public string? CurrentUserId { get; set; }
+        public User? CurrentUser { get; set; }
         public bool IsLoggedIn { get; set; }
 
         public async Task<IActionResult> OnGetAsync(Guid questionId)
         {
             CurrentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             IsLoggedIn = !string.IsNullOrEmpty(CurrentUserId);
+
+            if (IsLoggedIn)
+            {
+                CurrentUser = await _db.Users
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(u => u.Id == CurrentUserId);
+            }
 
             var question = await _db.Questions
                 .Include(q => q.User)

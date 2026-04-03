@@ -296,6 +296,10 @@ async function submitSolution(questionId) {
     const card = document.createElement("article");
     card.className = "qv-sol-card qv-sol-card--new";
     card.id = `solution-${sol.solId}`;
+    const avatarImg = sol.avatarUrl
+      ? `<div class="qv-avatar qv-avatar--sm"><img src="${escapeHtml(sol.avatarUrl)}" alt="avatar"></div>`
+      : `<div class="qv-avatar qv-avatar--sm">${escapeHtml((sol.userName || "?").charAt(0).toUpperCase())}</div>`;
+
     card.innerHTML = `
     <div class="qv-sol-vote-col">
         <button class="qv-sol-like" data-id="${sol.solId}" data-action="like" onclick="handleSolVote(this)">
@@ -310,7 +314,7 @@ async function submitSolution(questionId) {
     </div>
     <div class="qv-sol-content">
         <div class="qv-sol-meta">
-            <div class="qv-avatar qv-avatar--sm">${escapeHtml(sol.userName.charAt(0).toUpperCase())}</div>
+            ${avatarImg}
             <span class="qv-author-name">${escapeHtml(sol.userName)}</span>
             <span class="qv-author-date">just now</span>
         </div>

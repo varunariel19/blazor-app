@@ -162,7 +162,8 @@ namespace SolveIt.Services
             {
                 solId = solution.SolId,
                 body = solution.Body,
-                userName = user.UserName,
+                userName = string.IsNullOrWhiteSpace(user.DisplayName) ? user.UserName : user.DisplayName,
+                avatarUrl = user.AvatarUrl ?? string.Empty,
                 createdAt = solution.CreatedAt
             };
         }
