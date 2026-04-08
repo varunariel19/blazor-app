@@ -1,0 +1,187 @@
+﻿@page "/saved"
+@layout SolveIt.Components.Layout.MainLayout
+@inject SolveIt.Services.QuestionService QuestionService
+@inject SolveIt.Services.AuthService AuthService
+@inject SolveIt.UI_state.UiStateService UiState
+@using SolveIt.Models
+
+<div class="saved-page">
+
+    <div class="saved-header">
+        <h1>Saved Questions</h1>
+        <p>Questions you've bookmarked for later</p>
+    </div>
+
+    @if (IsLoading)
+    {
+        <div class="saved-state">
+            <i class="fa-regular fa-hourglass-half"></i>
+            <span>Loading saved questions…</span>
+        </div>
+    }
+    else if (SavedQuestions.Count == 0)
+    {
+        <div class="saved-state">
+            <i class="fa-regular fa-floppy-disk"></i>
+            <span>You haven't saved any questions yet.</span>
+        </div>
+    }
+    else
+    {
+        <div class="saved-count">@SavedQuestions.Count saved @(SavedQuestions.Count == 1 ? "question" : "questions")</div>
+
+        <div class="saved-list">
+            @foreach (var sq in SavedQuestions)
+            {
+                <div class="saved-card">
+                    <div class="saved-card-main">
+                        <a href="/questions/@sq.Question.QuestionId" class="saved-card-title">
+                            @sq.Question.Title
+                        </a>
+
+                        <div class="saved-card-tags">
+                            @foreach (var tag in sq.Question.QuestionTags ?? [])
+                            {
+                                <span class="tag">@tag.TagName</span>
+                            }
+                        </div>
+
+                        <div class="saved-card-meta">
+                            <span class="meta-item">
+                                <i class="fa-regular fa-lightbulb"></i>
+                                @sq.Question.SolutionCount @(sq.Question.SolutionCount == 1 ? "solution" : "solutions")
+                            </span>
+                            <span class="meta-item">
+                                <i class="fa-regular fa-clock"></i>
+                                Saved @TimeAgo(sq.SavedAt)
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="saved-card-actions">
+                        <button class="unsave-btn" title="Remove from bookmarks" @onclick="() => HandleUnsave(sq.QuestionId)">
+                            <i class="fa-solid fa-bookmark"></i>
+                            <span>Unsave</span>
+                        </button>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+
+</div>
+
+@if (ToastVisible)
+{
+    <div class="toast @ToastCssClass">
+        <i class="fa-solid @ToastIcon"></i>
+        <span>@ToastMessage</span>
+    </div>
+}
+
+@code {
+    private List<Models.SavedQuestion> SavedQuestions = [];
+    private bool IsLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await HandleGetAllSavedQues();
+    }
+
+    private async Task HandleGetAllSavedQues()
+    {
+        IsLoading = true;
+
+        try
+        {
+            string userId = String.Empty;
+
+            if (UiState.UserData != null)
+            {
+                userId = UiState.UserData.Id;
+            }
+            else
+            {
+                var user = await AuthService.GetCurrentUserAsync();
+                if (user != null)
+                    userId = user.Id;
+            }
+
+            if (userId == String.Empty) return;
+
+            var result = await QuestionService.GetSavedQuestionsAsync(userId);
+            if(result != null)
+            {
+                SavedQuestions = result;
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowToast("Failed to load saved questions.", ToastType.Error);
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    // private async Task HandleUnsave(Guid questionId)
+    // {
+    //     if (UiState.UserData == null || string.IsNullOrEmpty(UiState.UserData.Id)) return;
+
+    //     var result = await QuestionService.UnsaveQuestionAsync(questionId, UiState.UserData.Id);
+
+    //     if (result)
+    //     {
+    //         SavedQuestions.RemoveAll(sq => sq.QuestionId == questionId);
+    //         ShowToast("Question removed from saved.", ToastType.Success);
+    //     }
+    //     else
+    //     {
+    //         ShowToast("Could not remove question.", ToastType.Error);
+    //     }
+    // }
+
+    private static string Truncate(string? text, int max) =>
+        string.IsNullOrWhiteSpace(text) ? string.Empty
+        : text.Length <= max ? text
+        : text[..max].TrimEnd() + "…";
+
+    private static string TimeAgo(DateTime dt)
+    {
+        var diff = DateTime.UtcNow - dt.ToUniversalTime();
+        return diff.TotalMinutes < 1 ? "just now"
+             : diff.TotalHours < 1 ? $"{(int)diff.TotalMinutes}m ago"
+             : diff.TotalDays < 1 ? $"{(int)diff.TotalHours}h ago"
+             : diff.TotalDays < 30 ? $"{(int)diff.TotalDays}d ago"
+             : dt.ToString("MMM dd, yyyy");
+    }
+
+    private bool ToastVisible;
+    private string ToastMessage = string.Empty;
+    private string ToastCssClass = string.Empty;
+    private string ToastIcon = string.Empty;
+    private CancellationTokenSource? _toastCts;
+
+    private enum ToastType { Success, Error }
+
+    private async void ShowToast(string message, ToastType type)
+    {
+        _toastCts?.Cancel();
+        _toastCts = new CancellationTokenSource();
+
+        ToastMessage = message;
+        ToastCssClass = type == ToastType.Success ? "toast-success" : "toast-error";
+        ToastIcon = type == ToastType.Success ? "fa-circle-check" : "fa-circle-xmark";
+        ToastVisible = true;
+        StateHasChanged();
+
+        try
+        {
+            await Task.Delay(3000, _toastCts.Token);
+            ToastVisible = false;
+            StateHasChanged();
+        }
+        catch (TaskCanceledException) { }
+    }
+}

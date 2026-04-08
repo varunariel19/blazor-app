@@ -101,84 +101,102 @@
     }
     else
     {
-    @foreach (Question q in UiState.Questions)
-    {
-        <div class="question-card" style="flex-direction:column;gap:12px;">
-            <div class="q-body">
-                <h2 class="q-title">
-                    <a href="/question/@q.QuestionId">@q.Title</a>
-                </h2>
-                <div class="q-tags" style="margin-bottom:10px;">
-                    @foreach (var tag in q.QuestionTags)
-                    {
-                        <span class="tag">@tag.TagName</span>
-                    }
-                </div>
-                <div class="q-meta">
-                    <div class="q-author">
-                        <img src="@(q.User?.AvatarUrl ?? "https://api.dicebear.com/7.x/shapes/svg?seed=default")"
-                        class="author-avatar" />
-                        <span class="author-name">@(q.User?.DisplayName ?? "Unknown")</span>
-                    </div>
-                    <span class="q-time">asked @TimeAgo(q.CreatedAt)</span>
-                </div>
-            </div>
-
-            <div style="display:flex;align-items:center;gap:16px;padding-top:10px;border-top:1px solid var(--border);">
-                <div style="display:flex;align-items:center;gap:6px;">
-                    <button class="vote-btn" style="font-size:15px;">▲</button>
-                    <span
-                    style="font-size:14px;font-weight:600;color:var(--text-secondary);font-family:'JetBrains Mono',monospace;">@q.VoteCount</span>
-                    <button class="vote-btn" style="font-size:15px;">▼</button>
-                    <span style="font-size:13px;color:var(--text-muted);margin-left:2px;">votes</span>
-                </div>
-
-                <div style="display:flex;align-items:center;gap:6px;">
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2">
-                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                    </svg>
-                    <span
-                    style="font-size:14px;font-weight:600;color:var(--text-secondary);font-family:'JetBrains Mono',monospace;">@q.SolutionCount</span>
-                    <span style="font-size:13px;color:var(--text-muted);">answers</span>
-                </div>
-
-                <div style="display:flex;align-items:center;gap:6px;">
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                        <circle cx="12" cy="12" r="3" />
-                    </svg>
-                    <span
-                    style="font-size:14px;font-weight:600;color:var(--text-secondary);font-family:'JetBrains Mono',monospace;">@q.ViewCount</span>
-                    <span style="font-size:13px;color:var(--text-muted);">views</span>
-                </div>
-            </div>
-        </div>
-    }
-
-
-    <div class="pagination-container">
-        <button class="page-btn"
-        disabled="@(CurrentPage == 1)"
-        @onclick="() => ChangePage(CurrentPage - 1)">
-            ← Prev
-        </button>
-
-        @for (int i = 1; i <= TotalPages; i++)
+        @foreach (Question q in UiState.Questions)
         {
-            <button class="page-btn @(i == CurrentPage ? "active" : "")"
+            <div class="question-card" style="flex-direction:column;gap:12px;">
+                <div class="q-body">
+                    <h2 class="q-title">
+                        <a href="/question/@q.QuestionId">@q.Title</a>
+                    </h2>
+                    <div class="q-tags" style="margin-bottom:10px;">
+                        @foreach (var tag in q.QuestionTags)
+                        {
+                            <span class="tag">@tag.TagName</span>
+                        }
+                    </div>
+                    <div class="q-meta">
+                        <div class="q-author">
+                            <img src="@(q.User?.AvatarUrl ?? "https://api.dicebear.com/7.x/shapes/svg?seed=default")"
+                            class="author-avatar" />
+                            <span class="author-name">@(q.User?.DisplayName ?? "Unknown")</span>
+                        </div>
+                        <span class="q-time">asked @TimeAgo(q.CreatedAt)</span>
+                    </div>
+                </div>
 
-            @onclick="() => ChangePage(i)">
-                @i
-            </button>
+                <div style="display:flex;align-items:center;gap:16px;padding-top:10px;border-top:1px solid var(--border);">
+                    <div style="display:flex;align-items:center;gap:6px;">
+                        <button class="vote-btn" style="font-size:15px;">▲</button>
+                        <span
+                        style="font-size:14px;font-weight:600;color:var(--text-secondary);font-family:'JetBrains Mono',monospace;">@q.VoteCount</span>
+                        <button class="vote-btn" style="font-size:15px;">▼</button>
+                        <span style="font-size:13px;color:var(--text-muted);margin-left:2px;">votes</span>
+                    </div>
+
+                    <div style="display:flex;align-items:center;gap:6px;">
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                        </svg>
+                        <span
+                        style="font-size:14px;font-weight:600;color:var(--text-secondary);font-family:'JetBrains Mono',monospace;">@q.SolutionCount</span>
+                        <span style="font-size:13px;color:var(--text-muted);">answers</span>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                <circle cx="12" cy="12" r="3" />
+                            </svg>
+                            <span style="font-size: 14px; font-weight: 600; font-family: 'JetBrains Mono', monospace;">@q.ViewCount</span>
+                            <span style="font-size: 13px;">views</span>
+                        </div>
+
+                        <div>
+                            <button class="save-btn" @onclick="() => HandleSaveQuestion(q.QuestionId)">
+                                <i class="fa-regular fa-floppy-disk"></i>
+                                <span>Save</span>
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
         }
 
-        <button class="page-btn"
-        disabled="@(CurrentPage == TotalPages)"
-        @onclick="() => ChangePage(CurrentPage + 1)">
-            Next →
-        </button>
-    </div>
 
+        <div class="pagination-container">
+            <button class="page-btn"
+            disabled="@(CurrentPage == 1)"
+            @onclick="() => ChangePage(CurrentPage - 1)">
+                ← Prev
+            </button>
+
+            @for (int i = 1; i <= TotalPages; i++)
+            {
+                <button class="page-btn @(i == CurrentPage ? "active" : "")"
+
+                @onclick="() => ChangePage(i)">
+                    @i
+                </button>
+            }
+
+            <button class="page-btn"
+            disabled="@(CurrentPage == TotalPages)"
+            @onclick="() => ChangePage(CurrentPage + 1)">
+                Next →
+            </button>
+        </div>
+
+    }
+
+    @if (ToastVisible)
+    {
+        <div class="toast @ToastCssClass">
+            <i class="fa-solid @ToastIcon"></i>
+            <span>@ToastMessage</span>
+        </div>
     }
 </div>
 
@@ -196,6 +214,37 @@
     private int TotalPages = 1;
 
 
+
+
+    private bool ToastVisible = false;
+    private string ToastMessage = string.Empty;
+    private string ToastCssClass = string.Empty;
+    private string ToastIcon = string.Empty;
+    private CancellationTokenSource? _toastCts;
+
+    private enum ToastType { Success, Error }
+
+    private async void ShowToast(string message, ToastType type)
+    {
+        _toastCts?.Cancel();
+        _toastCts = new CancellationTokenSource();
+
+        ToastMessage = message;
+        ToastCssClass = type == ToastType.Success ? "toast-success" : "toast-error";
+        ToastIcon = type == ToastType.Success ? "fa-circle-check" : "fa-circle-xmark";
+        ToastVisible = true;
+        StateHasChanged();
+
+        try
+        {
+            await Task.Delay(3000, _toastCts.Token);
+            ToastVisible = false;
+            StateHasChanged();
+        }
+        catch (TaskCanceledException) { }
+    }
+
+
     protected override async Task OnInitializedAsync()
     {
         UiState.OnChange += HandleChange;
@@ -206,7 +255,7 @@
     {
         UiState.OnChange -= HandleChange;
     }
-  
+
     private async Task ChangePage(int page)
     {
         if (page < 1 || page > TotalPages) return;
@@ -353,6 +402,24 @@
             TotalPages = res.TotalPages.Value;
         }
     }
+
+
+    private async Task HandleSaveQuestion(Guid questionId)
+    {
+        if (UiState.UserData == null || string.IsNullOrEmpty(UiState.UserData.Id))
+            return;
+
+        var result = await QuestionService.SaveQuestionAsync(questionId, UiState.UserData.Id);
+
+        if (result)
+            ShowToast("Question saved successfully!", ToastType.Success);
+        else
+            ShowToast("Already saved or something went wrong.", ToastType.Error);
+    }
+
+ 
+
+    
 
 
 

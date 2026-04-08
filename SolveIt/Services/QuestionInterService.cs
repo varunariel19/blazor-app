@@ -26,8 +26,11 @@ namespace SolveIt.Services
 
             if (existingVote != null)
             {
-                context.Votes.Remove(existingVote);
-                question.VoteCount--;
+                return new QuestionVoteResult
+                {
+                    VoteCount = question.VoteCount,
+                    Message = "Already UpVoted"
+                };
             }
             else
             {
@@ -49,9 +52,59 @@ namespace SolveIt.Services
 
             return new QuestionVoteResult
             {
-                VoteCount = question.VoteCount
+                VoteCount = question.VoteCount,
+                Message = "UpVoted"
+                
             };
         }
+
+
+        public async Task<QuestionVoteResult> VoteOnSolutionAsync(Guid questionId, Guid solutionId, Guid userId)
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            var currentSol = await context.Solutions
+                .FirstOrDefaultAsync(s => s.QuestionId == questionId && s.SolId == solutionId);
+
+            if (currentSol == null)
+                throw new KeyNotFoundException("Solution not found.");
+
+            var existingVote = await context.Votes
+                .FirstOrDefaultAsync(v =>
+                    v.UserId == userId &&
+                    v.TargetId == solutionId &&
+                    v.TargetType == VoteType.Solution);
+
+            if (existingVote != null)
+            {
+                return new QuestionVoteResult
+                {
+                    VoteCount = currentSol.Votes,
+                    Message = "You have already upvoted this solution."
+                };
+            }
+
+            var vote = new Vote
+            {
+                VoteId = Guid.NewGuid(),
+                UserId = userId,
+                TargetId = solutionId,      
+                TargetType = VoteType.Solution, 
+            };
+
+            context.Votes.Add(vote);
+
+            currentSol.Votes++;
+
+            await context.SaveChangesAsync();
+
+            return new QuestionVoteResult
+            {
+                VoteCount = currentSol.Votes,
+                Message = "Solution Upvoted!"
+            };
+        }
+
         public async Task<CommentResult> AddCommentAsync(Guid questionId, string userId, string body)
         {
             if (string.IsNullOrWhiteSpace(body))
@@ -198,6 +251,7 @@ namespace SolveIt.Services
     public class QuestionVoteResult
     {
         public int VoteCount { get; set; }
+        public string Message { get; set; }
     }
 
     public class CommentResult

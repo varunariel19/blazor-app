@@ -225,11 +225,13 @@ function toggleSolutions() {
     : "";
 }
 
-async function handleVote(quesId, userId, btn) {
-    btn.disabled = true;
-
+async function handleVote(quesId,btnElement) {
+  
     try {
-        const res = await fetch(`/api/questions/${quesId}/${userId}/vote`, {
+        
+        btnElement.disabled = true;
+
+        const res = await fetch(`/api/questions/${quesId}/vote`, {
             method: "POST",
             headers: { "Content-Type": "application/json" }
         });
@@ -246,108 +248,131 @@ async function handleVote(quesId, userId, btn) {
             voteEl.textContent = data.voteCount;
         }
 
-        btn.classList.add("qv-upvote--active");
+        btnElement.classList.add("qv-upvote--active");
 
-        showToast("Upvoted!");
+        showToast(data.message);
     } catch (e) {
         showToast(e.message || "Could not vote", true);
     } finally {
-        btn.disabled = false;
+        btnElement.disabled = false;
     }
 }
 
-async function handleSolVote(btn) {
-  btn.disabled = true;
-  const id = btn.dataset.id,
-    action = btn.dataset.action;
-  try {
-    const res = await fetch(`/api/solutions/${id}/${action}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-    });
-    if (!res.ok) throw new Error(await res.text());
-    const data = await res.json(); // {likes, dislikes, votes}
-    document.getElementById(`like-${id}`).textContent = data.likes;
-    document.getElementById(`dislike-${id}`).textContent = data.dislikes;
-    document.getElementById(`netvotes-${id}`).textContent = data.votes;
-    showToast(action === "like" ? "👍 Liked!" : "👎 Disliked!");
-  } catch (e) {
-    showToast(e.message || "Could not vote", true);
-  } finally {
-    btn.disabled = false;
-  }
+
+async function handleSolVote(btnElement, solId, quesId) {
+    try {
+        btnElement.disabled = true;
+
+        const res = await fetch(`/api/solutions/${quesId}/${solId}/vote`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" }
+        });
+
+        if (!res.ok) {
+            const errorText = await res.text();
+            throw new Error(errorText);
+        }
+
+        const data = await res.json();
+
+        const voteEl = document.getElementById(`sol-vote-count-${solId}`);
+        if (voteEl) {
+            voteEl.textContent = `${data.voteCount}`;
+        }
+
+        btnElement.classList.add("qv-upvote--active");
+
+        showToast(data.message || "Vote recorded!");
+
+    } catch (e) {
+        console.error("Voting failed:", e);
+        showToast(e.message || "Could not vote", true);
+    } finally {
+        btnElement.disabled = false;
+    }
 }
 
 async function submitSolution(questionId) {
     const html = await window.QuillManager.uploadToCloud("sol-editor");
     const editor = document.getElementById("sol-editor");
-    const contentLen = html.toString().trim().length;
 
-    if (!contentLen ) {
-    showToast("Answer cannot be empty", true);
-    return;
-  }
+    const textOnly = html.replace(/<[^>]*>/g, "").trim();
 
-  const btn = document.getElementById("post-sol-btn");
-  btn.disabled = true;
-  btn.textContent = "Posting…";
+    if (!textOnly.length) {
+        showToast("Answer cannot be empty", true);
+        return;
+    }
 
-  try {
-    const res = await fetch(`/api/questions/${questionId}/solutions`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ body: html }),
-    });
-    if (!res.ok) throw new Error(await res.text());
-    const sol = await res.json(); // {solId, body, userName, createdAt}
+    const btn = document.getElementById("post-sol-btn");
+    btn.disabled = true;
+    const originalContent = btn.innerHTML;
+    btn.textContent = "Posting…";
 
-    const panel = document.getElementById("solutions-body");
-    if (!solOpen) toggleSolutions();
+    try {
+        const res = await fetch(`/api/questions/${questionId}/solutions`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ body: html }),
+        });
 
-    const empty = panel.querySelector(".qv-empty-state");
-    if (empty) empty.remove();
+        if (!res.ok) throw new Error(await res.text());
+        const sol = await res.json();
 
-    const card = document.createElement("article");
-    card.className = "qv-sol-card qv-sol-card--new";
-    card.id = `solution-${sol.solId}`;
-    const avatarImg = sol.avatarUrl
-      ? `<div class="qv-avatar qv-avatar--sm"><img src="${escapeHtml(sol.avatarUrl)}" alt="avatar"></div>`
-      : `<div class="qv-avatar qv-avatar--sm">${escapeHtml((sol.userName || "?").charAt(0).toUpperCase())}</div>`;
+        const panel = document.getElementById("solutions-body");
 
-    card.innerHTML = `
-    <div class="qv-sol-vote-col">
-        <button class="qv-sol-like" data-id="${sol.solId}" data-action="like" onclick="handleSolVote(this)">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z" /><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" /></svg>
-            <span id="like-${sol.solId}">0</span>
-        </button>
-        <span class="qv-sol-netvotes" id="netvotes-${sol.solId}">0</span>
-        <button class="qv-sol-dislike" data-id="${sol.solId}" data-action="dislike" onclick="handleSolVote(this)">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3H10z" /><path d="M17 2h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17" /></svg>
-            <span id="dislike-${sol.solId}">0</span>
-        </button>
-    </div>
-    <div class="qv-sol-content">
-        <div class="qv-sol-meta">
-            ${avatarImg}
-            <span class="qv-author-name">${escapeHtml(sol.userName)}</span>
-            <span class="qv-author-date">just now</span>
-        </div>
-        <div class="qv-body-content">${sol.body}</div>
-    </div>`;
-    panel.prepend(card);
+        if (typeof solOpen !== 'undefined' && !solOpen) toggleSolutions();
+        else panel.style.display = "block";
 
-    const h = document.getElementById("sol-heading");
-    const n = (parseInt(h.textContent) || 0) + 1;
-    h.textContent = `${n} Answer${n !== 1 ? "s" : ""}`;
+        const empty = panel.querySelector(".qv-empty-state");
+        if (empty) empty.remove();
 
-    editor.innerHTML = "";
-    showToast("Answer posted!");
-  } catch (e) {
-    showToast(e.message || "Failed to post", true);
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg> Post Answer`;
-  }
+        const card = document.createElement("article");
+        card.className = "qv-sol-card qv-sol-card--new";
+        card.id = `solution-${sol.solId}`;
+
+        const avatarHtml = sol.avatarUrl
+            ? `<div class="qv-avatar qv-avatar--sm"><img src="${sol.avatarUrl}" alt=""></div>`
+            : `<div class="qv-avatar qv-avatar--sm" style="--av-color: #3b82f6">${(sol.userName || "?").charAt(0).toUpperCase()}</div>`;
+
+        card.innerHTML = `
+            <div class="qv-sol-vote-col">
+                <button class="up-vote-sol" 
+                        onclick="handleSolVote(this, '${sol.solId}', '${questionId}')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                        <polyline points="18 15 12 9 6 15" />
+                    </svg>
+                </button>
+                <span class="sol-vote-count" id="sol-vote-count-${sol.solId}">0</span>
+                <span class="sol-vote-label">votes</span>
+            </div>
+            <div class="qv-sol-content">
+                <div class="qv-sol-meta">
+                    ${avatarHtml}
+                    <span class="qv-author-name">${sol.userName}</span>
+                    <span class="qv-author-date">just now</span>
+                </div>
+                <div class="qv-body-content">${sol.body}</div>
+            </div>`;
+
+        panel.prepend(card);
+
+        const h = document.getElementById("sol-heading");
+        if (h) {
+            const currentCount = parseInt(h.textContent) || 0;
+            const newCount = currentCount + 1;
+            h.textContent = `${newCount} Answer${newCount !== 1 ? "s" : ""}`;
+        }
+
+        if (window.quill) window.quill.setContents([]);
+        else editor.innerHTML = "";
+
+        showToast("Answer posted!");
+    } catch (e) {
+        showToast(e.message || "Failed to post", true);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalContent;
+    }
 }
 
 async function submitComment(questionId) {
@@ -369,7 +394,7 @@ async function submitComment(questionId) {
       body: JSON.stringify({ body }),
     });
     if (!res.ok) throw new Error(await res.text());
-    const c = await res.json(); // {commentId, body, userName}
+    const c = await res.json(); 
 
     document.getElementById("no-comments-msg")?.remove();
 

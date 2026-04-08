@@ -1,6 +1,5 @@
 ﻿using Google.Protobuf.Collections;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Internal;
 using Qdrant.Client.Grpc;
 using SolveIt.Data;
 using SolveIt.Models;
@@ -234,4 +233,80 @@ public class QuestionService(IDbContextFactory<AppDbContext> contextFactory , Ve
     }
 
 
+    public async Task<List<Question>> GetHotQuestionAsync()
+    {
+        try
+        {
+        await using var context = await contextFactory.CreateDbContextAsync();
+
+        var within24Hours = DateTime.UtcNow.AddHours(-24);
+        var hotQuestions = await context.Questions.Where(q => q.CreatedAt > within24Hours).OrderByDescending(q => q.VoteCount).ToListAsync();
+        return hotQuestions;
+             
+        }catch(Exception ex)
+        {
+            throw new Exception(ex.Message);
+        }
+
+    }
+
+
+    public async Task<bool> SaveQuestionAsync(Guid questionId, string userId)
+    {
+        if ( string.IsNullOrWhiteSpace(userId))
+            return false;
+
+        if (!Guid.TryParse(userId, out var parsedUserId))
+            return false;
+
+        try
+        {
+            await using var context = await contextFactory.CreateDbContextAsync();
+
+            bool alreadySaved = await context.SavedQuestions
+                .AnyAsync(sq => sq.QuestionId == questionId && sq.UserId == parsedUserId);
+
+            if (alreadySaved)
+                return false;
+
+            var savedQuestion = new SavedQuestion
+            {
+                QuestionId = questionId,
+                UserId = parsedUserId,
+            };
+
+            context.SavedQuestions.Add(savedQuestion);
+            await context.SaveChangesAsync();
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+
+    }
+
+
+
+
+    public async Task<List<SavedQuestion>> GetSavedQuestionsAsync(string userId)
+    {
+        try
+        {
+            await using var context = await contextFactory.CreateDbContextAsync();
+
+            return await context.SavedQuestions
+                .Where(sq => sq.UserId == Guid.Parse(userId))
+                .Include(sq => sq.Question)
+                    .ThenInclude(q => q.QuestionTags)
+                .OrderByDescending(sq => sq.SavedAt)
+                .AsNoTracking()
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+           
+            return [];
+        }
+    }
 }

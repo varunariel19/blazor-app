@@ -1174,3 +1174,96 @@ body {
         flex-direction: column;
     }
 }
+
+
+
+/* UP VOTE BUTTON  STYLING */
+
+.qv-sol-vote-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 10px;
+    min-width: 60px;
+    gap: 4px;
+}
+
+/* The Vote Button */
+.up-vote-sol {
+    background: transparent;
+    border: 1px solid #e0e0e0;
+    border-radius: 50%;
+    width: 42px;
+    height: 42px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    color: #666;
+}
+
+    .up-vote-sol svg {
+        width: 20px;
+        height: 20px;
+        transition: transform 0.2s ease;
+    }
+
+    /* Hover State */
+    .up-vote-sol:hover:not(:disabled) {
+        border-color: #3b82f6; /* Modern Blue */
+        color: #3b82f6;
+        background-color: #eff6ff;
+    }
+
+    .up-vote-sol:hover svg {
+        transform: translateY(-2px); /* Subtle bounce */
+    }
+
+    /* Active/Voted State */
+    .up-vote-sol.qv-upvote--active {
+        background-color: #3b82f6;
+        border-color: #3b82f6;
+        color: #ffffff;
+    }
+
+    /* Disabled State (Not logged in or loading) */
+    .up-vote-sol:disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
+        background-color: #f5f5f5;
+    }
+
+/* Vote Number Styling */
+.sol-vote-count {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #333;
+    margin-top: 4px;
+}
+
+/* "votes" text label */
+.sol-vote-label {
+    font-size: 0.75rem;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.qv-sol-card--new {
+    animation: slideIn 0.4s ease-out;
+    border-left: 3px solid #3b82f6; 

@@ -2,10 +2,12 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Identity;
 using SolveIt.Models;
+using Microsoft.EntityFrameworkCore;
+using SolveIt.Data;
 
 namespace SolveIt.Services;
 
-public class AuthService(UserManager<User> userManager , AuthenticationStateProvider authProvider)
+public class AuthService(UserManager<User> userManager , AuthenticationStateProvider authProvider , IDbContextFactory<AppDbContext> contextFactory)
 {
     private readonly UserManager<User> _userManager = userManager;
     private readonly  AuthenticationStateProvider _authProvider = authProvider;
@@ -61,4 +63,26 @@ public class AuthService(UserManager<User> userManager , AuthenticationStateProv
 
         return await _userManager.FindByEmailAsync(email);
     }
+
+
+    public async Task<List<User>> GetListOfUsers()
+    {
+        try
+        {
+            List<User> users = [];
+
+            await using var context = await contextFactory.CreateDbContextAsync();
+            users = await context.Users.ToListAsync();
+            return users;
+
+        }
+        catch(Exception ex)
+        {
+            throw new Exception(ex.Message);
+
+
+        }
+         
+    }
+
 }

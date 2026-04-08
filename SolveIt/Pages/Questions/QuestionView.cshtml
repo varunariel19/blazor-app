@@ -31,7 +31,7 @@
 
             <div class="qv-vote-block">
                 <button class="qv-upvote @(isLoggedIn ? "" : "qv-upvote--locked")"'
-                id="upvote-btn" data-id="@q.QuestionId" onclick="handleVote('@q.QuestionId' ,'@currentUser.Id' )"
+                id="upvote-btn" data-id="@q.QuestionId" onclick="handleVote('@q.QuestionId' , this)"
                 @(isLoggedIn ? "" : "disabled title=\"Log in to vote\"")>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                         <polyline points="18 15 12 9 6 15"/>
@@ -143,32 +143,21 @@
             <div class="qv-solutions-body" id="solutions-body" style="display:none;">
                 @if (q.Solutions.Any())
                 {
-                    @foreach (var sol in q.Solutions.OrderByDescending(s => s.CreatedAt))
+                    @foreach (var sol in q.Solutions.OrderByDescending(s => s.Votes))
                     {
                         <article class="qv-sol-card" id="solution-@sol.SolId">
 
                             <div class="qv-sol-vote-col">
-                                <button class="qv-sol-like @(isLoggedIn ? "" : "qv-upvote--locked")"
-                                data-id="@sol.SolId" data-action="like"
-                                onclick="handleSolVote(this)" @(isLoggedIn ? "" : "disabled")>
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/>
-                                        <path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/>
+                                <button class="up-vote-sol"
+                                        data-id="@q.QuestionId"
+                                        onclick="handleSolVote(this, '@sol.SolId', '@sol.QuestionId')"
+                                @(isLoggedIn ? "" : "disabled title=\"Log in to vote\"")>
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                        <polyline points="18 15 12 9 6 15" />
                                     </svg>
-                                    <span id="like-@sol.SolId">@sol.Likes</span>
                                 </button>
-
-                                <span class="qv-sol-netvotes" id="netvotes-@sol.SolId">@sol.Votes</span>
-
-                                <button class="qv-sol-dislike @(isLoggedIn ? "" : "qv-upvote--locked")"
-                                data-id="@sol.SolId" data-action="dislike"
-                                onclick="handleSolVote(this)" @(isLoggedIn ? "" : "disabled")>
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3H10z"/>
-                                        <path d="M17 2h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"/>
-                                    </svg>
-                                    <span id="dislike-@sol.SolId">@sol.Dislikes</span>
-                                </button>
+                                <span class="sol-vote-count" id="sol-vote-count-@sol.SolId">@sol.Votes</span>
+                                <span class="sol-vote-label">votes</span>
                             </div>
 
                             <div class="qv-sol-content">

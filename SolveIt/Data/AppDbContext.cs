@@ -12,10 +12,9 @@ namespace SolveIt.Data
         public DbSet<Solution> Solutions => Set<Solution>();
         public DbSet<Comment> Comments => Set<Comment>();
         public DbSet<Tag> Tags => Set<Tag>();
-
         public DbSet<Vote> Votes { get; set; }
-
-
+        public DbSet<SavedQuestion> SavedQuestions { get; set; }
+ 
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -85,6 +84,14 @@ namespace SolveIt.Data
                 .HasMany(s => s.SolutionTags)
                 .WithMany(t => t.SolutionTags)
                 .UsingEntity(j => j.ToTable("SolutionTags"));
+
+
+            builder.Entity<SavedQuestion>().HasIndex(sq => new { sq.UserId, sq.QuestionId }).IsUnique();
+            builder.Entity<SavedQuestion>()
+                .HasOne(sq => sq.Question)
+                .WithMany()
+                .HasForeignKey(sq => sq.QuestionId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }
