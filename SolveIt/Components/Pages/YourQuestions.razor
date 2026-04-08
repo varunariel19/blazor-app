@@ -1,0 +1,197 @@
+﻿@page "/my-questions"
+@using SolveIt.Models
+@using SolveIt.Services
+
+@inject QuestionService QuestionService
+@inject SolveIt.UI_state.UiStateService UiState
+@inject NavigationManager NavManager
+@inject SolveIt.Services.AuthService authService;
+
+@implements IDisposable
+
+<PageTitle>My Questions</PageTitle>
+
+<div class="feed-header">
+    <div>
+        <h1 class="feed-title">Your Asked Questions </h1>
+        <p class="feed-subtitle">@TotalQues questions across all topics</p>
+    </div>
+</div>
+
+
+<div class="questions-feed">
+
+    @if (MyQuestions == null)
+    {
+        <p style="color:#666;text-align:center;padding:2rem;">
+            No questions yet!
+        </p>
+    }
+    else
+    {
+        @foreach (Question q in MyQuestions)
+        {
+            <div class="question-card" style="flex-direction:column;gap:12px;">
+
+                <div class="q-body">
+                    <h2 class="q-title">
+                        <a href="/question/@q.QuestionId">@q.Title</a>
+                    </h2>
+
+                    <div class="q-tags" style="margin-bottom:10px;">
+                        @foreach (var tag in q.QuestionTags)
+                        {
+                            <span class="tag">@tag.TagName</span>
+                        }
+                    </div>
+
+                    <div class="q-meta">
+                        <div class="q-author">
+                            <img src="@(q.User?.AvatarUrl ?? "https://api.dicebear.com/7.x/shapes/svg?seed=default")"
+                            class="author-avatar" />
+                            <span class="author-name">
+                                @(q.User.DisplayName ?? "Unknown")
+                            </span>
+                        </div>
+
+                        <span class="q-time">
+                            asked @TimeAgo(q.CreatedAt)
+                        </span>
+                    </div>
+                </div>
+
+                <div style="display:flex;align-items:center;gap:16px;padding-top:10px;border-top:1px solid var(--border);">
+
+                    <!-- Votes -->
+                    <div style="display:flex;align-items:center;gap:6px;">
+                        <button class="vote-btn" style="font-size:15px;">▲</button>
+                        <span style="font-size:14px;font-weight:600;color:var(--text-secondary);font-family:'JetBrains Mono',monospace;">
+                            @q.VoteCount
+                        </span>
+                        <button class="vote-btn" style="font-size:15px;">▼</button>
+                        <span style="font-size:13px;color:var(--text-muted);margin-left:2px;">
+                            votes
+                        </span>
+                    </div>
+
+                    <!-- Answers -->
+                    <div style="display:flex;align-items:center;gap:6px;">
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                        </svg>
+                        <span class="mono">@q.SolutionCount</span>
+                        <span class="label">answers</span>
+                    </div>
+
+                    <!-- Views -->
+                    <div style="display:flex;align-items:center;gap:6px;">
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                            <circle cx="12" cy="12" r="3" />
+                        </svg>
+                        <span class="mono">@q.ViewCount</span>
+                        <span class="label">views</span>
+                    </div>
+
+                </div>
+            </div>
+        }
+
+        <!-- Pagination -->
+        <div class="pagination-container">
+            <button class="page-btn"
+            disabled="@(CurrentPage == 1)"
+            @onclick="() => ChangePage(CurrentPage - 1)">
+                ← Prev
+            </button>
+
+            @for (int i = 1; i <= TotalPages; i++)
+            {
+                <button class="page-btn @(i == CurrentPage ? "active" : "")"
+                @onclick="() => ChangePage(i)">
+                    @i
+                </button>
+            }
+
+            <button class="page-btn"
+            disabled="@(CurrentPage == TotalPages)"
+            @onclick="() => ChangePage(CurrentPage + 1)">
+                Next →
+            </button>
+        </div>
+    }
+
+</div>
+
+@code {
+
+    private List<Question> MyQuestions = new();
+
+    private int CurrentPage = 1;
+    private int PageSize = 5;
+    private int TotalQues = 0;
+    private int TotalPages = 1;
+
+    protected override async Task OnInitializedAsync()
+    {
+        UiState.OnChange += HandleChange;
+
+        await FetchMyQuestions(1);
+    }
+
+    public void Dispose()
+    {
+        UiState.OnChange -= HandleChange;
+    }
+
+    private async Task FetchMyQuestions(int page)
+    {
+        var userId = UiState.UserData?.Id;
+
+        if (string.IsNullOrEmpty(userId))
+        {
+
+            var user = await authService.GetCurrentUserAsync();
+            userId = user!.Id;
+            UiState.PresistUserState(user);
+        }
+
+        // reset the questions
+        UiState.SetQuestions(null);
+        var res = await QuestionService.GetQuestionsByUserAsync(userId, page, PageSize);
+
+        MyQuestions = res.Questions;
+        TotalQues = res.totalQues ?? 0;
+
+        if (res.TotalPages.HasValue)
+            TotalPages = res.TotalPages.Value;
+
+        CurrentPage = page;
+    }
+
+    private async Task ChangePage(int page)
+    {
+        if (page < 1 || page > TotalPages) return;
+
+        await FetchMyQuestions(page);
+    }
+
+    private string TimeAgo(DateTime dt)
+    {
+        var diff = DateTime.UtcNow - dt;
+
+        if (diff.TotalMinutes < 1) return "just now";
+        if (diff.TotalHours < 1) return $"{(int)diff.TotalMinutes}m ago";
+        if (diff.TotalDays < 1) return $"{(int)diff.TotalHours}h ago";
+        if (diff.TotalDays < 30) return $"{(int)diff.TotalDays}d ago";
+
+        return dt.ToString("MMM dd, yyyy");
+    }
+
+    private async void HandleChange()
+    {
+        await InvokeAsync(StateHasChanged);
+    }
+
+   
+}

@@ -5,6 +5,7 @@ using SolveIt.Data;
 using SolveIt.Components;
 using SolveIt.UI_state;
 using SolveIt.Services;
+using Qdrant.Client;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -12,6 +13,20 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 
 builder.Services.AddDbContextFactory<AppDbContext>(options =>
     options.UseSqlServer(connectionString));
+
+
+builder.Services.AddSingleton<QdrantClient>(sp =>
+{
+    var config = sp.GetRequiredService<IConfiguration>();
+    var apiKey = config["Qdrant:ApiKey"]!;
+    return new QdrantClient(
+        host: "af95c35a-873f-4154-9ef0-342b927f81be.us-west-1-0.aws.cloud.qdrant.io",
+        https: true, 
+        apiKey: apiKey
+    );
+});
+
+
 
 builder.Services.AddIdentity<User, IdentityRole>(options =>
 {
@@ -43,10 +58,13 @@ builder.Services.AddRazorComponents()
 builder.Services.AddServerSideBlazor()
     .AddCircuitOptions(options => { options.DetailedErrors = true; });
 
-builder.Services.AddScoped<UserStateService>(); 
 builder.Services.AddScoped<UiStateService>();
 builder.Services.AddScoped<QuestionService>();
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<VectorService>();
+builder.Services.AddScoped<EmbeddingService>();
+builder.Services.AddHttpClient<EmbeddingService>();
+
 
 builder.Services.AddScoped<QuestionInteractionService>();
 

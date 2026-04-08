@@ -9,11 +9,19 @@
     var currentUser = Model.CurrentUser ?? q.User;
 }
 
-<link rel="stylesheet" href="~/css/QuestionView.css" asp-append-version="true" />
+
+<link rel="stylesheet" href="/css/QuestionView.css" asp-append-version="true" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,400;0,500;1,400&family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-<script src="/js/script.js" defer></script>
+<link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet" />
+<link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet" />
 
+<style>
+   
+</style>
+<script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
+<script src="/js/main.js" defer></script>
+<script src="/js/script.js"></script>
 <div class="qv-bg-noise"></div>
 
 <div class="qv-shell">
@@ -22,9 +30,9 @@
         <div class="qv-sidebar-sticky">
 
             <div class="qv-vote-block">
-                <button class="qv-upvote @(isLoggedIn ? "" : "qv-upvote--locked")"
-                        id="upvote-btn" data-id="@q.QuestionId" onclick="handleVote(this)"
-                        @(isLoggedIn ? "" : "disabled title=\"Log in to vote\"")>
+                <button class="qv-upvote @(isLoggedIn ? "" : "qv-upvote--locked")"'
+                id="upvote-btn" data-id="@q.QuestionId" onclick="handleVote('@q.QuestionId' ,'@currentUser.Id' )"
+                @(isLoggedIn ? "" : "disabled title=\"Log in to vote\"")>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                         <polyline points="18 15 12 9 6 15"/>
                     </svg>
@@ -58,7 +66,7 @@
             <nav class="qv-jump-nav">
                 <a href="#question-body" class="qv-jump">Question</a>
                 <a href="#solutions-panel" class="qv-jump" onclick="openSolutions(); return true;">Answers</a>
-                <a href="#add-solution" class="qv-jump">Add Answer</a>
+                <a href="#your-solution" class="qv-jump">Add Answer</a>
                 <a href="#comments-panel" class="qv-jump">Comments</a>
             </nav>
 
@@ -141,8 +149,8 @@
 
                             <div class="qv-sol-vote-col">
                                 <button class="qv-sol-like @(isLoggedIn ? "" : "qv-upvote--locked")"
-                                        data-id="@sol.SolId" data-action="like"
-                                        onclick="handleSolVote(this)" @(isLoggedIn ? "" : "disabled")>
+                                data-id="@sol.SolId" data-action="like"
+                                onclick="handleSolVote(this)" @(isLoggedIn ? "" : "disabled")>
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/>
                                         <path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/>
@@ -153,8 +161,8 @@
                                 <span class="qv-sol-netvotes" id="netvotes-@sol.SolId">@sol.Votes</span>
 
                                 <button class="qv-sol-dislike @(isLoggedIn ? "" : "qv-upvote--locked")"
-                                        data-id="@sol.SolId" data-action="dislike"
-                                        onclick="handleSolVote(this)" @(isLoggedIn ? "" : "disabled")>
+                                data-id="@sol.SolId" data-action="dislike"
+                                onclick="handleSolVote(this)" @(isLoggedIn ? "" : "disabled")>
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3H10z"/>
                                         <path d="M17 2h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"/>
@@ -172,7 +180,7 @@
                                     else
                                     {
                                         <div class="qv-avatar qv-avatar--sm"
-                                             style="--av-color:@StringToColor(sol.User.DisplayName ?? sol.User.UserName ?? "U")">
+                                        style="--av-color:@StringToColor(sol.User.DisplayName ?? sol.User.UserName ?? "U")">
                                             @((sol.User.DisplayName ?? sol.User.UserName ?? "?").Substring(0, 1).ToUpper())
                                         </div>
                                     }
@@ -203,89 +211,41 @@
             </div>
         </section>
 
-        <section id="add-solution" class="qv-add-solution">
+   
+        <section class="your-solution" >
             <div class="qv-section-header">
                 <h2 class="qv-section-title">
                     <span class="qv-section-icon qv-section-icon--green">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <line x1="12" y1="5" x2="12" y2="19"/>
-                            <line x1="5" y1="12" x2="19" y2="12"/>
+                            <line x1="12" y1="5" x2="12" y2="19" />
+                            <line x1="5" y1="12" x2="19" y2="12" />
                         </svg>
                     </span>
                     Your Answer
                 </h2>
             </div>
-
             @if (isLoggedIn)
             {
-                <div class="qv-editor-wrap">
-                    <div class="qv-editor-toolbar">
-                        <div class="qv-toolbar-group">
-                            <button type="button" class="qv-tb-btn" onclick="fmtSol('bold')"         title="Bold"><b>B</b></button>
-                            <button type="button" class="qv-tb-btn" onclick="fmtSol('italic')"       title="Italic"><i>I</i></button>
-                            <button type="button" class="qv-tb-btn" onclick="fmtSol('underline')"    title="Underline"><u>U</u></button>
-                            <button type="button" class="qv-tb-btn" onclick="fmtSol('strikeThrough')" title="Strike"><s>S</s></button>
-                        </div>
-                        <div class="qv-toolbar-sep"></div>
-                        <div class="qv-toolbar-group">
-                            <button type="button" class="qv-tb-btn" onclick="fmtSol('insertUnorderedList')" title="Bullets">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
-                                    <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
-                                </svg>
-                            </button>
-                            <button type="button" class="qv-tb-btn" onclick="fmtSol('insertOrderedList')" title="Numbers">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/>
-                                    <path d="M4 6h1v4"/><path d="M4 10h2"/><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"/>
-                                </svg>
-                            </button>
-                        </div>
-                        <div class="qv-toolbar-sep"></div>
-                        <div class="qv-toolbar-group">
-                            <button type="button" class="qv-tb-btn" onclick="fmtHeading()"    title="Heading">H</button>
-                            <button type="button" class="qv-tb-btn" onclick="fmtBlockquote()" title="Quote">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"/>
-                                    <path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z"/>
-                                </svg>
-                            </button>
-                            <button type="button" class="qv-tb-btn" onclick="fmtCode()" title="Code">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
-                                </svg>
-                            </button>
-                            <button type="button" class="qv-tb-btn" onclick="fmtLink()" title="Link">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
-                                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
 
-                    <div class="qv-editor" id="sol-editor" contenteditable="true"
-                         data-placeholder="Write a clear, detailed answer…" spellcheck="true"></div>
-
-                    <div class="qv-editor-footer">
-                        <span class="qv-editor-hint">Supports <b>bold</b>, <i>italic</i>, lists, code &amp; links</span>
-                        <button class="qv-post-btn" id="post-sol-btn" onclick="submitSolution('@q.QuestionId')">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <line x1="22" y1="2" x2="11" y2="13"/>
-                                <polygon points="22 2 15 22 11 13 2 9 22 2"/>
-                            </svg>
-                            Post Answer
-                        </button>
-                    </div>
+                <div id="sol-editor" class="rich-editor-container"></div>
+                <div class="qv-editor-footer">
+                    <span class="qv-editor-hint"></span>
+                    <button class="qv-post-btn" id="post-sol-btn" onclick="submitSolution('@q.QuestionId')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <line x1="22" y1="2" x2="11" y2="13" />
+                            <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                        </svg>
+                        Post Answer
+                    </button>
                 </div>
             }
             else
             {
                 <div class="qv-login-card">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
-                        <polyline points="10 17 15 12 10 7"/>
-                        <line x1="15" y1="12" x2="3" y2="12"/>
+                        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                        <polyline points="10 17 15 12 10 7" />
+                        <line x1="15" y1="12" x2="3" y2="12" />
                     </svg>
                     <div>
                         <strong>Want to answer?</strong>
@@ -293,7 +253,9 @@
                     </div>
                 </div>
             }
+
         </section>
+         
 
         <section id="comments-panel" class="qv-comments-section">
             <div class="qv-section-header">
@@ -323,7 +285,7 @@
                         else
                         {
                             <div class="qv-avatar qv-avatar--sm"
-                                 style="--av-color:@StringToColor(c.User.DisplayName ?? c.User.UserName ?? "U")">
+                            style="--av-color:@StringToColor(c.User.DisplayName ?? c.User.UserName ?? "U")">
                                 @((c.User.DisplayName ?? c.User.UserName ?? "?").Substring(0, 1).ToUpper())
                             </div>
                         }
@@ -348,14 +310,14 @@
                     else
                     {
                         <div class="qv-avatar qv-avatar--sm"
-                             style="--av-color:@StringToColor(currentUser?.DisplayName ?? currentUser?.UserName ?? "U")">
+                        style="--av-color:@StringToColor(currentUser?.DisplayName ?? currentUser?.UserName ?? "U")">
                             @((currentUser?.DisplayName ?? currentUser?.UserName ?? "?").Substring(0, 1).ToUpper())
                         </div>
                     }
                     <div class="qv-comment-input-wrap">
                         <textarea id="comment-input" class="qv-comment-textarea"
-                                  placeholder="Add a comment…" rows="2" maxlength="1000"
-                                  oninput="updateCharCount(this)"></textarea>
+                        placeholder="Add a comment…" rows="2" maxlength="1000"
+                        oninput="updateCharCount(this)"></textarea>
                         <div class="qv-comment-actions">
                             <span class="qv-char-count" id="char-count">0 / 1000</span>
                             <button class="qv-comment-submit" onclick="submitComment('@q.QuestionId')">Comment</button>
@@ -370,9 +332,21 @@
         </section>
 
     </main>
+
+
 </div>
 
 <div class="qv-toast" id="qv-toast"><span id="qv-toast-msg"></span></div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            console.log("Quill available:", typeof Quill);           
+            console.log("sol-editor el:", document.getElementById("sol-editor")); 
+            console.log("QuillManager:", typeof window.QuillManager); 
+
+            window.QuillManager.init("sol-editor");
+        });
+    </script>
 
 @functions {
     string TimeAgo(DateTime dt)
@@ -390,4 +364,13 @@
         int h = s.Aggregate(0, (a, c) => a * 31 + c);
         return $"hsl({Math.Abs(h) % 360},60%,52%)";
     }
+
+      
+       
+
+
 }
+
+
+
+  

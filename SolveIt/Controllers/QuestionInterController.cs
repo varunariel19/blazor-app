@@ -21,16 +21,19 @@ namespace SolveIt.Controllers
 
      
         [Authorize]
-        [HttpPost("questions/{questionId:guid}/vote")]
+        [HttpPost("questions/{questionId:guid}/{userId:guid}/vote")]
         public async Task<IActionResult> VoteOnQuestion(Guid questionId)
         {
             var userId = GetUserId();
             if (userId == null)
                 return Unauthorized("You must be logged in to vote.");
 
+
+
             try
             {
-                var result = await _service.VoteOnQuestionAsync(questionId);
+                var result = await _service.VoteOnQuestionAsync(questionId  ,Guid.Parse(userId));
+
                 return Ok(result);
             }
             catch (KeyNotFoundException ex) { return NotFound(ex.Message); }

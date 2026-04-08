@@ -461,7 +461,6 @@ button {
         transform: translateY(-1px);
     }
 
-/* ─── ASK FORM ──────────────────────────────── */
 .ask-form-card {
     background: var(--bg-surface);
     border: 1px solid var(--accent);
@@ -966,37 +965,42 @@ button {
 }
 
 #quill-desc, #quill-solution {
-    color: white;
+    color: var(--text-primary);
     border-bottom-left-radius: 10px;
     border-bottom-right-radius: 10px;
     min-height: 200px;
 }
 
+.ql-editor.ql-blank::before {
+    color: var(--text-muted);
+}
 
+/* ─── TAG INPUT ─────────────────────────────── */
 .tag-input-wrapper {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 8px;
     padding: 8px 12px;
-    border: 1px solid #dee2e6;
+    border: 1px solid var(--border);
     border-radius: 8px;
+    background: var(--bg-raised);
     transition: all 0.2s;
 }
 
     .tag-input-wrapper:focus-within {
-        border-color: #3b82f6;
-        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px var(--accent-glow);
     }
 
 .tag-pill {
-    background-color: #eff6ff;
-    color: #1e40af;
+    background: var(--tag-bg);
+    color: var(--tag-text);
     padding: 4px 10px;
     border-radius: 6px;
     font-size: 0.85rem;
     font-weight: 500;
-    border: 1px solid #dbeafe;
+    border: 1px solid var(--tag-border);
     display: flex;
     align-items: center;
 }
@@ -1006,35 +1010,37 @@ button {
     cursor: pointer;
     font-size: 1.1rem;
     line-height: 1;
+    color: var(--tag-text);
 }
 
     .tag-remove:hover {
-        color: #ef4444;
+        color: var(--red);
     }
 
 .tag-inner-input {
     border: none;
     outline: none;
     background-color: transparent;
-    color: white;
+    color: var(--text-primary);
     flex: 1;
     min-width: 150px;
     font-size: 0.95rem;
 }
 
-
+/* ─── SOLUTION BUTTONS ──────────────────────── */
 .btn-add-solution {
-    background: #eff6ff;
-    color: #1d4ed8;
-    border: 1px dashed #93c5fd;
+    background: var(--accent-glow);
+    color: var(--accent);
+    border: 1px dashed rgba(91, 141, 238, 0.4);
     padding: 8px 12px;
     border-radius: 6px;
     cursor: pointer;
     font-size: 0.9rem;
+    transition: background 0.15s;
 }
 
     .btn-add-solution:hover {
-        background: #dbeafe;
+        background: rgba(91, 141, 238, 0.25);
     }
 
 .solution-header {
@@ -1049,43 +1055,184 @@ button {
     border: none;
     font-size: 1.2rem;
     cursor: pointer;
-    color: #6b7280;
+    color: var(--text-muted);
+    transition: color 0.15s;
 }
 
     .solution-close:hover {
-        color: #ef4444;
+        color: var(--red);
     }
 
-
-.btn-add-solution {
-    background: #eff6ff;
-    color: #1d4ed8;
-    border: 1px dashed #93c5fd;
-    padding: 8px 12px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.9rem;
-}
-
-    .btn-add-solution:hover {
-        background: #dbeafe;
-    }
-
-.solution-header {
+/* ─── PAGINATION ────────────────────────────── */
+.pagination-container {
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
-    margin-bottom: 6px;
+    gap: 8px;
+    margin-top: 24px;
+    flex-wrap: wrap;
 }
 
-.solution-close {
-    background: transparent;
-    border: none;
-    font-size: 1.2rem;
+.page-btn {
+    border: 1px solid var(--border);
+    background: var(--bg-raised);
+    color: var(--text-secondary);
+    padding: 6px 12px;
+    border-radius: 8px;
     cursor: pointer;
-    color: #6b7280;
+    font-size: 14px;
+    transition: all 0.2s ease;
 }
 
-    .solution-close:hover {
-        color: #ef4444;
+    .page-btn:hover:not(:disabled) {
+        background: var(--accent);
+        color: white;
+        border-color: var(--accent);
     }
+
+    .page-btn.active {
+        background: var(--accent);
+        color: white;
+        border-color: var(--accent);
+        font-weight: 600;
+    }
+
+    .page-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+/* ─── SEARCH DROPDOWN ───────────────────────── */
+.search-dropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    background: var(--bg-raised);
+    border: 1px solid var(--border-hover);
+    border-radius: 10px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    overflow: hidden;
+}
+
+.dropdown-header {
+    padding: 8px 14px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+}
+
+.search-result-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 14px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+    text-decoration: none;
+}
+
+    .search-result-item:last-of-type {
+        border-bottom: none;
+    }
+
+    .search-result-item:hover {
+        background: var(--bg-hover);
+    }
+
+.result-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    border: 1px solid var(--border);
+}
+
+.result-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.result-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 4px;
+}
+
+.result-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.result-author {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.result-tag-pill {
+    font-size: 10px;
+    background: var(--tag-bg);
+    color: var(--tag-text);
+    border: 1px solid var(--tag-border);
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-weight: 500;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.result-stats {
+    display: flex;
+    gap: 8px;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.result-stat {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+    .result-stat.has-answers {
+        color: var(--green);
+    }
+
+.dropdown-footer {
+    padding: 9px 14px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--accent);
+    cursor: pointer;
+    border-top: 1px solid var(--border);
+    transition: background 0.15s;
+}
+
+    .dropdown-footer:hover {
+        text-decoration: underline;
+        background: var(--bg-hover);
+    }
+
+.dropdown-no-results {
+    padding: 20px 14px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+
+/*  MY ASKED QUESTION STYLING  -------------------------------  */
+
+

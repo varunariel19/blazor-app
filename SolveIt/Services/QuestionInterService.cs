@@ -8,7 +8,7 @@ namespace SolveIt.Services
     {
         private readonly IDbContextFactory<AppDbContext> _contextFactory = contextFactory;
 
-        public async Task<QuestionVoteResult> VoteOnQuestionAsync(Guid questionId)
+        public async Task<QuestionVoteResult> VoteOnQuestionAsync(Guid questionId, Guid userId)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
 
@@ -18,7 +18,31 @@ namespace SolveIt.Services
             if (question == null)
                 throw new KeyNotFoundException("Question not found.");
 
-            question.VoteCount++;
+            var existingVote = await context.Votes
+                .FirstOrDefaultAsync(v =>
+                    v.UserId == userId &&
+                    v.TargetId == questionId &&
+                    v.TargetType == VoteType.Question);
+
+            if (existingVote != null)
+            {
+                context.Votes.Remove(existingVote);
+                question.VoteCount--;
+            }
+            else
+            {
+                var vote = new Vote
+                {
+                    VoteId = Guid.NewGuid(),
+                    UserId = userId,
+                    TargetId = questionId,
+                    TargetType = VoteType.Question
+                };
+
+                context.Votes.Add(vote);
+                question.VoteCount++;
+            }
+
             question.UpdatedAt = DateTime.UtcNow;
 
             await context.SaveChangesAsync();
@@ -28,7 +52,6 @@ namespace SolveIt.Services
                 VoteCount = question.VoteCount
             };
         }
-
         public async Task<CommentResult> AddCommentAsync(Guid questionId, string userId, string body)
         {
             if (string.IsNullOrWhiteSpace(body))

@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+﻿using System.Reflection.Emit;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using SolveIt.Models;
 
@@ -11,6 +12,9 @@ namespace SolveIt.Data
         public DbSet<Solution> Solutions => Set<Solution>();
         public DbSet<Comment> Comments => Set<Comment>();
         public DbSet<Tag> Tags => Set<Tag>();
+
+        public DbSet<Vote> Votes { get; set; }
+
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

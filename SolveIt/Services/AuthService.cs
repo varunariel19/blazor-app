@@ -1,11 +1,15 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Components.Authorization;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Identity;
 using SolveIt.Models;
 
 namespace SolveIt.Services;
 
-public class AuthService(UserManager<User> userManager)
+public class AuthService(UserManager<User> userManager , AuthenticationStateProvider authProvider)
 {
     private readonly UserManager<User> _userManager = userManager;
+    private readonly  AuthenticationStateProvider _authProvider = authProvider;
+
 
     private static readonly string[] Avatars =
     [
@@ -39,5 +43,22 @@ public class AuthService(UserManager<User> userManager)
         };
 
         return await _userManager.CreateAsync(user, password);
+    }
+
+
+    public async Task<User?> GetCurrentUserAsync()
+    {
+        var authState = await _authProvider.GetAuthenticationStateAsync();
+        var claims = authState.User;
+
+        if (claims.Identity?.IsAuthenticated != true)
+            return null;
+
+        var email = claims.FindFirst(ClaimTypes.Email)?.Value;
+
+        if (string.IsNullOrEmpty(email))
+            return null;
+
+        return await _userManager.FindByEmailAsync(email);
     }
 }

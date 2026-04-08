@@ -1,0 +1,103 @@
+﻿@page "/account"
+@layout SolveIt.Components.Layout.EmptyLayout
+
+@if (currentUser == null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <div class="account-container">
+
+        <div class="profile-header text-center">
+            <div class="avatar-circle">
+                @(currentUser.DisplayName?.Substring(0, 2).ToUpper())
+            </div>
+            <h2>@currentUser.DisplayName</h2>
+            <p class="email">@currentUser.Email</p>
+
+            <div class="badges">
+                <span class="badge active">@(currentUser.IsActive ? "Active" : "Inactive")</span>
+                <span class="badge rep">Rep: @currentUser.Reputation</span>
+            </div>
+
+            <div class="stats">
+                <div><h3>@currentUser.TotalQuestions</h3><span>Questions</span></div>
+                <div><h3>@currentUser.TotalSolutions</h3><span>Solutions</span></div>
+            </div>
+        </div>
+
+        <!-- PROFILE -->
+        <section>
+            <h4>PROFILE</h4>
+            <EditForm Model="profileForm" OnValidSubmit="HandleProfileUpdate">
+                <label>Display name</label>
+                <InputText @bind-Value="profileForm.DisplayName" class="input" />
+
+                <label>Bio</label>
+                <InputTextArea @bind-Value="profileForm.Bio" class="input textarea" />
+
+                <h5>LINKS & URL</h5>
+
+                <label>Profile URL</label>
+                <div class="input-group">
+                    <span>solveit.dev/u/</span>
+                    <input value="@currentUser.UserName" disabled />
+                </div>
+
+                <label>Avatar URL</label>
+                <div class="input-group">
+                    <InputText @bind-Value="profileForm.AvatarUrl" />
+                    <button type="button" class="btn-secondary">Apply</button>
+                </div>
+
+                <div class="form-actions">
+                    <button type="reset" class="btn-secondary">Reset</button>
+                    <button type="submit" class="btn-primary">Save profile</button>
+                </div>
+            </EditForm>
+        </section>
+
+        <!-- ACCOUNT -->
+        <section>
+            <h4>ACCOUNT</h4>
+            <EditForm Model="emailForm" OnValidSubmit="HandleEmailUpdate">
+                <label>Email address</label>
+                <div class="input-group">
+                    <InputText @bind-Value="emailForm.Email" />
+                    <button type="submit" class="btn-secondary">Update</button>
+                </div>
+            </EditForm>
+        </section>
+
+        <!-- PASSWORD -->
+        <section>
+            <h4>CHANGE PASSWORD</h4>
+            <EditForm Model="passwordForm" OnValidSubmit="HandlePasswordChange">
+                <InputText type="password" @bind-Value="passwordForm.Current" class="input" />
+                <InputText type="password" @bind-Value="passwordForm.New" class="input" />
+                <InputText type="password" @bind-Value="passwordForm.Confirm" class="input" />
+
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Update password</button>
+                </div>
+            </EditForm>
+        </section>
+
+        <!-- INFO -->
+        <section>
+            <h4>ACCOUNT INFO</h4>
+            <div class="info-grid">
+                <div><span>Member since</span><strong>@currentUser.JoinedAt.ToShortDateString()</strong></div>
+                <div><span>Last seen</span><strong>@(currentUser.LastSeenAt?.ToString("g") ?? "—")</strong></div>
+            </div>
+        </section>
+
+        <!-- DELETE -->
+        <section class="danger">
+            <h4>Danger zone</h4>
+            <button class="btn-danger" @onclick="DeleteAccount">Delete account</button>
+        </section>
+
+    </div>
+}

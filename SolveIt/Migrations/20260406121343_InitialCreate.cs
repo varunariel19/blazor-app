@@ -74,6 +74,20 @@ namespace SolveIt.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Votes",
+                columns: table => new
+                {
+                    VoteId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TargetId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TargetType = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Votes", x => x.VoteId);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "AspNetRoleClaims",
                 columns: table => new
                 {
@@ -414,6 +428,9 @@ namespace SolveIt.Migrations
 
             migrationBuilder.DropTable(
                 name: "SolutionTags");
+
+            migrationBuilder.DropTable(
+                name: "Votes");
 
             migrationBuilder.DropTable(
                 name: "AspNetRoles");

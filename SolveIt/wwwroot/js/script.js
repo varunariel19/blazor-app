@@ -10,7 +10,8 @@
     ["clean"],
   ];
 
-  function init(id) {
+    function init(id) {
+
     const element = document.getElementById(id);
     if (!element) return;
 
@@ -101,8 +102,8 @@
     element.className = "rich-editor-container";
   }
 
-  const uploadToCloud = async () => {
-    const rawHtml = getContent("quill-desc", false);
+  const uploadToCloud = async (editorName) => {
+    const rawHtml = getContent(editorName, false);
     await loadAppwrite();
     const converted = await processHtmlImages(rawHtml);
 
@@ -224,24 +225,35 @@ function toggleSolutions() {
     : "";
 }
 
-async function handleVote(btn) {
-  btn.disabled = true;
-  const id = btn.dataset.id;
-  try {
-    const res = await fetch(`/api/questions/${id}/vote`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-    });
-    if (!res.ok) throw new Error(await res.text());
-    const data = await res.json(); // {voteCount}
-    document.getElementById(`vote-count-${id}`).textContent = data.voteCount;
-    btn.classList.add("qv-upvote--active");
-    showToast("Upvoted!");
-  } catch (e) {
-    showToast(e.message || "Could not vote", true);
-  } finally {
-    btn.disabled = false;
-  }
+async function handleVote(quesId, userId, btn) {
+    btn.disabled = true;
+
+    try {
+        const res = await fetch(`/api/questions/${quesId}/${userId}/vote`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" }
+        });
+
+        if (!res.ok) {
+            const errorText = await res.text();
+            throw new Error(errorText);
+        }
+
+        const data = await res.json();
+
+        const voteEl = document.getElementById(`vote-count-${quesId}`);
+        if (voteEl) {
+            voteEl.textContent = data.voteCount;
+        }
+
+        btn.classList.add("qv-upvote--active");
+
+        showToast("Upvoted!");
+    } catch (e) {
+        showToast(e.message || "Could not vote", true);
+    } finally {
+        btn.disabled = false;
+    }
 }
 
 async function handleSolVote(btn) {
@@ -267,9 +279,11 @@ async function handleSolVote(btn) {
 }
 
 async function submitSolution(questionId) {
-  const editor = document.getElementById("sol-editor");
-  const html = editor.innerHTML.trim();
-  if (!html || !editor.textContent.trim()) {
+    const html = await window.QuillManager.uploadToCloud("sol-editor");
+    const editor = document.getElementById("sol-editor");
+    const contentLen = html.toString().trim().length;
+
+    if (!contentLen ) {
     showToast("Answer cannot be empty", true);
     return;
   }

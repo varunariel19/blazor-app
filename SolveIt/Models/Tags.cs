@@ -6,6 +6,6 @@ public class Tag
     public string TagName { get; set; } = string.Empty;
     public string ColorHex { get; set; } = "#6B7280";
 
-    public ICollection<Question> QuestionTags { get; set; } = new List<Question>();
-    public ICollection<Solution> SolutionTags { get; set; } = new List<Solution>();
+    public ICollection<Question> QuestionTags { get; set; } = [];
+    public ICollection<Solution> SolutionTags { get; set; } = [];
 }

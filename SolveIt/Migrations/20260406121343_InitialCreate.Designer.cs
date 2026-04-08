@@ -12,7 +12,7 @@ using SolveIt.Data;
 namespace SolveIt.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260402062723_InitialCreate")]
+    [Migration("20260406121343_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -424,6 +424,26 @@ namespace SolveIt.Migrations
                         .HasFilter("[NormalizedUserName] IS NOT NULL");
 
                     b.ToTable("AspNetUsers", (string)null);
+                });
+
+            modelBuilder.Entity("SolveIt.Models.Vote", b =>
+                {
+                    b.Property<Guid>("VoteId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("TargetId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("TargetType")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("VoteId");
+
+                    b.ToTable("Votes");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
