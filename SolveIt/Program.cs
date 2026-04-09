@@ -63,10 +63,11 @@ builder.Services.AddScoped<QuestionService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<VectorService>();
 builder.Services.AddScoped<EmbeddingService>();
+builder.Services.AddScoped<ConversationService>();
+builder.Services.AddScoped<QuestionInteractionService>();
+
 builder.Services.AddHttpClient<EmbeddingService>();
 
-
-builder.Services.AddScoped<QuestionInteractionService>();
 
 
 var app = builder.Build();

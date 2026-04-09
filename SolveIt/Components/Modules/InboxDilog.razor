@@ -1,0 +1,392 @@
+﻿@using SolveIt.Services
+@inject NavigationManager NavManager
+@inject SolveIt.UI_state.UiStateService UiState
+@inject SolveIt.Services.AuthService authService
+@inject SolveIt.Services.ConversationService conversation
+
+
+@if (IsOpen)
+{
+    <div class="inbox-overlay" @onclick="Close"></div>
+}
+
+<div class="inbox-wrapper">
+    <button class="inbox-trigger @(HasUnread ? "has-unread" : "")" @onclick="ToggleInbox" title="Inbox">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="22 12 16 12 14 15 10 15 8 12 2 12" />
+            <path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z" />
+        </svg>
+        @if (UnreadCount > 0)
+        {
+            <span class="inbox-badge">@(UnreadCount > 99 ? "99+" : UnreadCount.ToString())</span>
+        }
+    </button>
+
+    @if (IsOpen)
+    {
+        <div class="inbox-dropdown">
+
+            @if (UserChat == null)
+            {
+                <div class="inbox-header">
+                    <div class="inbox-header-left">
+                        <span class="inbox-title">INBOX</span>
+                        <span class="inbox-filter">@FilterLabel ▾</span>
+                    </div>
+                    @if (HasUnread)
+                    {
+                        <button class="inbox-mark-all" @onclick="MarkAllRead">Mark all as read</button>
+                    }
+                </div>
+
+                <div class="inbox-search-wrap">
+                    <svg class="inbox-search-icon" xmlns="http://www.w3.org/2000/svg" width="13" height="13"
+                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8" />
+                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    </svg>
+                    <input class="inbox-search-input"
+                    type="text"
+                    placeholder="New conversation…"
+                    value="@_userQuery"
+                    @oninput="OnInputChanged"
+                    @onfocus="() => _showDropdown = true" />
+
+                    @if (_showDropdown && _searchResults.Any())
+                    {
+                        <div class="inbox-search-dropdown">
+                            @foreach (var user in _searchResults)
+                            {
+                                <div class="inbox-search-item" @onclick="() => SelectedUserForChat(user)">
+                                    @if (!string.IsNullOrEmpty(user.AvatarUrl))
+                                    {
+                                        <img class="inbox-avatar inbox-avatar-sm" src="@user.AvatarUrl" alt="@user.DisplayName" />
+                                    }
+                                    else
+                                    {
+                                        <div class="inbox-avatar inbox-avatar-fallback inbox-avatar-sm">
+                                            @(user.DisplayName?.Substring(0, 1).ToUpper() ?? "?")
+                                        </div>
+                                    }
+                                    <div class="inbox-search-info">
+                                        <span class="inbox-search-name">@user.DisplayName</span>
+                                        <span class="inbox-search-handle">@@@user.UserName</span>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+
+                <div class="inbox-messages">
+                    @if (Messages == null || !Messages.Any())
+                    {
+                        <div class="inbox-empty">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24"
+                            fill="none" stroke="currentColor" stroke-width="1.5">
+                                <polyline points="22 12 16 12 14 15 10 15 8 12 2 12" />
+                                <path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z" />
+                            </svg>
+                            <p>Your inbox is empty</p>
+                        </div>
+                    }
+                    else
+                    {
+                        @foreach (var msg in Messages)
+                        {
+                            <div class="inbox-item @(!msg.IsRead ? "unread" : "")"
+                            @onclick="() => OpenMessage(msg)">
+
+                                <div class="inbox-avatar-wrap">
+                                    @if (!msg.IsRead)
+                                    {
+                                        <span class="unread-dot"></span>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(msg.User?.AvatarUrl))
+                                    {
+                                        <img class="inbox-avatar" src="@msg.User.AvatarUrl"
+                                        alt="@msg.User.Username" />
+                                    }
+                                    else
+                                    {
+                                        <div class="inbox-avatar inbox-avatar-fallback">
+                                            @(msg.User?.Username?.Substring(0, 1).ToUpper() ?? "?")
+                                        </div>
+                                    }
+                                </div>
+
+                                <div class="inbox-item-body">
+                                    <div class="inbox-item-header-row">
+                                        <span class="inbox-item-username">@(msg.User?.Username ?? "Unknown")</span>
+                                        <span class="inbox-item-time">@FormatTime(msg.ReceivedAt)</span>
+                                    </div>
+                                    <div class="inbox-item-preview @(!msg.IsRead ? "preview-bold" : "")">
+                                        @msg.RecentMessage
+                                    </div>
+                                </div>
+
+                                @if (!msg.IsRead)
+                                {
+                                    <button class="inbox-item-read-btn" title="Mark as read"
+                                    @onclick:stopPropagation="true"
+                                    @onclick="() => MarkRead(msg)">
+                                        ✓
+                                    </button>
+                                }
+                            </div>
+                        }
+                    }
+
+                </div>
+
+                <div class="inbox-footer">
+                    <a @onclick="GoToFullInbox" @onclick:preventDefault="true" href="#" class="inbox-full-link">
+                        Go to full inbox →
+                    </a>
+                </div>
+            }
+            else
+            {
+                <div class="inbox-chat-header">
+                    <button class="inbox-back-btn" @onclick="CloseChat">← Back</button>
+                    <div class="inbox-chat-user">
+                        @if (!string.IsNullOrWhiteSpace(ActiveMessage?.User?.AvatarUrl))
+                        {
+                            <img class="inbox-avatar inbox-avatar-sm"
+                            src="@ActiveMessage!.User!.AvatarUrl"
+                            alt="@ActiveMessage.User.Username" />
+                        }
+                        <span class="inbox-chat-username">@ActiveMessage?.User?.Username</span>
+                    </div>
+                </div>
+
+                <div class="inbox-chat-body">
+                    <UserChat ChatId="@UserChat.ChatId" UserId="@UserChat.UserId" />
+                </div>
+            }
+
+        </div>
+    }
+</div>
+
+
+<style>
+    /* ── Search bar ── */
+    .inbox-search-wrap {
+    position: relative;
+    padding: 8px 12px;
+    border-bottom: 1px solid #e3e6e8;
+    }
+
+    .inbox-search-icon {
+    position: absolute;
+    left: 22px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #9fa6ad;
+    pointer-events: none;
+    }
+
+    .inbox-search-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 7px 12px 7px 28px;
+    font-size: 13px;
+    border: 1px solid #d6d9dc;
+    border-radius: 16px;
+    background: #fff;
+    color: #232629;
+    font-family: inherit;
+    outline: none;
+    transition: border-color .15s, background .15s;
+    }
+
+    .inbox-search-input:focus {
+    border-color: #0074cc;
+    background: #fff;
+    }
+
+    .inbox-search-input::placeholder {
+    color: #9fa6ad;
+    }
+
+    /* ── Search dropdown ── */
+    .inbox-search-dropdown {
+    position: absolute;
+    top: calc(100% - 8px);
+    left: 12px;
+    right: 12px;
+    background: #fff;
+    border: 1px solid #d6d9dc;
+    border-radius: 10px;
+    z-index: 200;
+    overflow-x: hidden;
+    overflow-y: auto;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.10);
+    }
+
+    .inbox-search-item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: background .1s;
+    }
+
+    .inbox-search-item:hover {
+    background: #f0f2f5;
+    }
+
+    .inbox-search-item + .inbox-search-item {
+    border-top: 1px solid #f0f2f5;
+    }
+
+    .inbox-search-info {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    }
+
+    .inbox-search-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #232629;
+    }
+
+    .inbox-search-handle {
+    font-size: 11px;
+    color: #9fa6ad;
+    }
+</style>
+
+@code {
+    [Parameter] public List<InboxMessage> Messages { get; set; } = new();
+    [Parameter] public string FilterLabel { get; set; } = "ALL";
+    [Parameter] public EventCallback<InboxMessage> OnMessageClicked { get; set; }
+    [Parameter] public EventCallback OnViewAll { get; set; }
+
+    private bool IsOpen { get; set; } = false;
+    private int UnreadCount => Messages?.Count(m => !m.IsRead) ?? 0;
+    private bool HasUnread => UnreadCount > 0;
+
+    private OpenedUserChat? UserChat = null;
+    private InboxMessage? ActiveMessage = null;
+
+    private string _userQuery = string.Empty;
+    private bool _showDropdown = false;
+    private List<User> _searchResults = [];
+
+
+
+    public string InputValue
+    {
+        get => _userQuery;
+        set
+        {
+            if (_userQuery == value) return;
+            _userQuery = value;
+        }
+    }
+
+
+    private void ToggleInbox() => IsOpen = !IsOpen;
+    private void Close() => IsOpen = false;
+    private void CloseChat() { UserChat = null; ActiveMessage = null; }
+
+    private async Task OnInputChanged(ChangeEventArgs e)
+    {
+        _userQuery = e.Value?.ToString() ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(_userQuery))
+        {
+            _searchResults.Clear();
+            _showDropdown = false;
+        }
+        else
+        {
+            _searchResults = await authService.SearchUsersAsync(_userQuery);
+            _showDropdown = _searchResults.Any();
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task SelectedUserForChat(User user)
+    {
+
+        // first check already exsits a convo between them .  
+        var myUserId = UiState.UserData.Id;
+        var selectedUserId  = user.Id;
+
+        var res = await conversation.CheckExistingConvo(myUserId, selectedUserId);
+
+        _showDropdown = false;
+        _userQuery = string.Empty;
+        _searchResults.Clear();
+        UserChat = new OpenedUserChat { UserId = user.Id, ChatId = Guid.NewGuid().ToString() };
+
+
+        // ActiveMessage = new InboxMessage { User = new UserInboxDetails { UserId = ..., Username = user.DisplayName, AvatarUrl = user.AvatarUrl ?? "" } };
+    }
+ 
+    private async Task OpenMessage(InboxMessage msg)
+    {
+        msg.IsRead = true;
+        ActiveMessage = msg;
+        UserChat = new OpenedUserChat
+            {
+                UserId = msg.User?.UserId.ToString() ?? string.Empty,
+                ChatId = msg.ChatId
+            };
+        await OnMessageClicked.InvokeAsync(msg);
+    }
+
+    private void MarkRead(InboxMessage msg) => msg.IsRead = true;
+
+    private void MarkAllRead()
+    {
+        if (Messages == null) return;
+        foreach (var m in Messages) m.IsRead = true;
+    }
+
+    private async Task GoToFullInbox()
+    {
+        IsOpen = false;
+        await OnViewAll.InvokeAsync();
+        NavManager.NavigateTo("/inbox");
+    }
+
+    private string FormatTime(DateTime dt)
+    {
+        var diff = DateTime.Now - dt;
+        if (diff.TotalMinutes < 1) return "just now";
+        if (diff.TotalHours < 1) return $"{(int)diff.TotalMinutes}m ago";
+        if (diff.TotalDays < 1) return $"{(int)diff.TotalHours}h ago";
+        if (diff.TotalDays < 7) return $"{(int)diff.TotalDays}d ago";
+        return dt.ToString("MMM d");
+    }
+
+    public class InboxMessage
+    {
+        public string ChatId { get; set; } = Guid.NewGuid().ToString();
+        public UserInboxDetails? User { get; set; }
+        public string RecentMessage { get; set; } = string.Empty;
+        public bool IsRead { get; set; } = false;
+        public DateTime ReceivedAt { get; set; } = DateTime.Now;
+    }
+
+    public class UserInboxDetails
+    {
+        public required Guid UserId { get; set; }
+        public required string Username { get; set; }
+        public required string AvatarUrl { get; set; }
+    }
+
+    public class OpenedUserChat
+    {
+        public required string UserId { get; set; }
+        public required string ChatId { get; set; }
+    }
+}

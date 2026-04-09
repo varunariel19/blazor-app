@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using SolveIt.Models;
 using Microsoft.EntityFrameworkCore;
 using SolveIt.Data;
+using System.Text.RegularExpressions;
 
 namespace SolveIt.Services;
 
@@ -85,4 +86,26 @@ public class AuthService(UserManager<User> userManager , AuthenticationStateProv
          
     }
 
-}
+
+    public async Task<List<User>> SearchUsersAsync(string query)
+    {
+        try
+        {
+            List<User> users = [];
+
+        await using var context = await contextFactory.CreateDbContextAsync();
+        users = await context.Users
+            .Where(u => EF.Functions.Like(u.DisplayName, $"%{query}%"))
+            .ToListAsync();
+
+        return users;
+
+        }
+        catch (Exception ex)
+        {
+            throw new Exception(ex.Message);
+
+
+        }
+    }
+ }

@@ -18,7 +18,11 @@ public class User : IdentityUser // already contains pass and email fields
     public DateTime JoinedAt { get; set; } = DateTime.UtcNow;
     public DateTime? LastSeenAt { get; set; }
 
-    public ICollection<Question> Questions { get; set; } = new List<Question>();
-    public ICollection<Solution> Solutions { get; set; } = new List<Solution>();
-    public ICollection<Comment> Comments { get; set; } = new List<Comment>();
+    public ICollection<Question> Questions { get; set; } = [];
+    public ICollection<Solution> Solutions { get; set; } = [];
+    public ICollection<Comment> Comments { get; set; } = [];
+
+    public ICollection<Inbox> InboxesAsUser1 { get; set; } = [];
+    public ICollection<Inbox> InboxesAsUser2 { get; set; } = [];
+
 }

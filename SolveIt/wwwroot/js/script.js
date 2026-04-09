@@ -120,6 +120,9 @@
   };
 })();
 
+window.scrollToBottom = (el) => { if (el) el.scrollTop = el.scrollHeight; }
+
+
 const ed = () => document.getElementById("sol-editor");
 let solOpen = false;
 
