@@ -1,20 +1,17 @@
-﻿    @inherits LayoutComponentBase
-    @implements IDisposable
-
-    @using System.Security.Claims
-    @using SolveIt.Services
-    @using SolveIt.Models
-    @using SolveIt.Components.Modules
-    @using Microsoft.AspNetCore.Identity
-    @using Microsoft.AspNetCore.Components.Authorization
-
-
-    @inject SolveIt.Services.QuestionService questionService
-    @inject AuthenticationStateProvider AuthProvider
-    @inject UserManager<User> UserManager
-    @inject SolveIt.UI_state.UiStateService UiState
-    @inject NavigationManager NavManager
-    @inject SolveIt.Services.AuthService authService
+﻿@inherits LayoutComponentBase
+@using System.Security.Claims
+@using SolveIt.Services
+@using SolveIt.Models
+@using SolveIt.Components.Modules
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Components.Authorization
+@inject SolveIt.UI_state.SignalRService SignalR
+@inject SolveIt.Services.QuestionService questionService
+@inject AuthenticationStateProvider AuthProvider
+@inject UserManager<User> UserManager
+@inject SolveIt.UI_state.UiStateService UiState
+@inject NavigationManager NavManager
+@inject SolveIt.Services.AuthService authService
 
 <div class="app-wrapper">
 
@@ -31,12 +28,8 @@
                     <circle cx="11" cy="11" r="8" />
                     <path d="m21 21-4.35-4.35" />
                 </svg>
-                <input type="text"
-                placeholder="Search questions, tags, users..."
-                @bind="searchedValue"
-                @bind:event="oninput"
-                @onkeydown="HandleKeyDown"
-                class="search-input" />
+                <input type="text" placeholder="Search questions, tags, users..." @bind="searchedValue"
+                @bind:event="oninput" @onkeydown="HandleKeyDown" class="search-input" />
                 <button @onclick="HandleSearchQuestion" class="search-kbd">Search</button>
 
                 @if (showDropdown)
@@ -57,11 +50,9 @@
                             @foreach (var q in searchResults.Take(takeLimit))
                             {
                                 <a class="search-result-item" href="/question/@q.QuestionId">
-                                    <img class="result-avatar"
-                                    src="@(string.IsNullOrEmpty(q.User.AvatarUrl)
-                                         ? $"https://api.dicebear.com/7.x/shapes/svg?seed={q.User.DisplayName}"
-                                         : q.User.AvatarUrl)"
-                                    alt="@q.User.DisplayName" />
+                                    <img class="result-avatar" src="@(string.IsNullOrEmpty(q.User.AvatarUrl)
+                                                                                                       ? $"https://api.dicebear.com/7.x/shapes/svg?seed={q.User.DisplayName}"
+                                                                                                       : q.User.AvatarUrl)" alt="@q.User.DisplayName" />
                                     <div class="result-body">
                                         <div class="result-title">@q.Title</div>
                                         <div class="result-meta">
@@ -120,11 +111,9 @@
                     <polyline points="22,6 12,13 2,6" />
                 </svg>
 
-                <InboxDilog Messages="@myMessages"
-                       FilterLabel="ALL"
-                       OnMessageClicked="HandleMessageClick" />
+                <InboxDilog Messages="@myMessages" FilterLabel="ALL" OnMessageClicked="HandleMessageClick" />
 
-           
+
             </button>
 
 
@@ -219,7 +208,7 @@
             <div class="widget">
                 <h4 class="widget-title">🔥 Hot Today</h4>
                 <ul class="hot-list">
-                    @foreach( var hotQ in hotQuesRes.Take(5))
+                    @foreach (var hotQ in hotQuesRes.Take(5))
                     {
                         <li><a href="/question/@hotQ.QuestionId">@hotQ.Title</a></li>
 
@@ -250,154 +239,111 @@
 </div>
 
 
-
 @code {
 
-
     #region Variables
+
     private List<Tag> allTags = [];
     public string searchedValue = string.Empty;
 
     private List<Question> searchResults = [];
     private List<Question> hotQuesRes = [];
+
     private int takeLimit = 3;
     private bool viewResult = false;
     private bool showDropdown = false;
     private bool isSearching = false;
+
     private CancellationTokenSource? _debounceToken;
-    private User? UserData = null;
-    private bool InboxDilog = false;
+
+    private bool _inboxInitialized = false;
+    private string _currentUserId = string.Empty;
+
+    private List<InboxDilog.InboxMessage> myMessages = new();
+    private bool _initialized = false;
+    private bool _isInitializing = false;
+    private CancellationTokenSource? _initializationToken;
+
     #endregion
 
-//     List<InboxDilog.InboxMessage> myMessages = new()
-// {
-//     new()
-//     {
-//         RecentMessage = "Hey! Did you see the new documentation I uploaded?",
-//         IsRead = false,
-//         ReceivedAt = DateTime.Now.AddMinutes(-10),
-//         User = new InboxDilog.UserInboxDetails
-//         {
-//             UserId = Guid.NewGuid(),
-//             Username = "AliceTech",
-//             AvatarUrl = "https:i.pravatar.cc/150?u=alice"
-//         }
-//     },
-//     new()
-//     {
-//         RecentMessage = "The bug in the navbar is finally fixed. Check it out.",
-//         IsRead = true,
-//         ReceivedAt = DateTime.Now.AddHours(-1),
-//         User = new InboxDilog.UserInboxDetails
-//         {
-//             UserId = Guid.NewGuid(),
-//             Username = "BobCoder",
-//             AvatarUrl = "https:i.pravatar.cc/150?u=bob"
-//         }
-//     },
-//     new()
-//     {
-//         RecentMessage = "Are we still meeting at 3 PM for the sprint review?",
-//         IsRead = false,
-//         ReceivedAt = DateTime.Now.AddHours(-3),
-//         User = new InboxDilog.UserInboxDetails
-//         {
-//             UserId = Guid.NewGuid(),
-//             Username = "Charlie_PM",
-//             AvatarUrl = "https:i.pravatar.cc/150?u=charlie"
-//         }
-//     },
-//     new()
-//     {
-//         RecentMessage = "Welcome to the team! Glad to have you on board.",
-//         IsRead = true,
-//         ReceivedAt = DateTime.Now.AddDays(-1),
-//         User = new InboxDilog.UserInboxDetails
-//         {
-//             UserId = Guid.NewGuid(),
-//             Username = "SystemAdmin",
-//             AvatarUrl = "https:i.pravatar.cc/150?u=system"
-//         }
-//     },
 
-//     new()
-//     {
-//         RecentMessage = "Welcome to the team! Glad to have you on board.",
-//         IsRead = true,
-//         ReceivedAt = DateTime.Now.AddDays(-1),
-//         User = new InboxDilog.UserInboxDetails
-//         {
-//             UserId = Guid.NewGuid(),
-//             Username = "SystemAdmin",
-//             AvatarUrl = "https:i.pravatar.cc/150?u=system"
-//         }
-//     },
+    #region Initialization
 
-
-//     new()
-//     {
-//         RecentMessage = "Welcome to the team! Glad to have you on board.",
-//         IsRead = true,
-//         ReceivedAt = DateTime.Now.AddDays(-1),
-//         User = new InboxDilog.UserInboxDetails
-//         {
-//             UserId = Guid.NewGuid(),
-//             Username = "SystemAdmin",
-//             AvatarUrl = "https:i.pravatar.cc/150?u=system"
-//         }
-//     },
-
-
-//     new()
-//     {
-//         RecentMessage = "Welcome to the team! Glad to have you on board.",
-//         IsRead = true,
-//         ReceivedAt = DateTime.Now.AddDays(-1),
-//         User = new InboxDilog.UserInboxDetails
-//         {
-//             UserId = Guid.NewGuid(),
-//             Username = "SystemAdmin",
-//             AvatarUrl = "https:i.pravatar.cc/150?u=system"
-//         }
-//     }
-// };
-
-
-
-    List<InboxDilog.InboxMessage> myMessages = new();
-
-  
-    #region Intialization 
     protected override async Task OnInitializedAsync()
     {
-        UiState.OnChange += StateHasChanged;
-        await LoadUserIntoState();
-        await LoadHotQuestions();
+        if (_initialized || _isInitializing)
+            return;
+
+        _isInitializing = true;
+        _initialized = true;
+        _initializationToken = new CancellationTokenSource();
+
+        UiState.OnChange += HandleStateChange;
+        UiState.OnUserLoaded += InitializeInbox;
+
+        try
+        {
+            await LoadHotQuestions();
+            await LoadUserIntoState();
+
+            await InvokeAsync(StateHasChanged);
+        }
+        finally
+        {
+            _isInitializing = false;
+        }
     }
 
-    public void Dispose()
+    private async Task InitializeInbox()
     {
-        UiState.OnChange -= StateHasChanged;
-        _debounceToken?.Cancel();
+        if (_inboxInitialized || UiState.UserData == null)
+            return;
+
+        _inboxInitialized = true;
+        _currentUserId = UiState.UserData.Id;
+
+
+        await SignalR.StartAsync();
+        await Task.CompletedTask;
     }
+
     #endregion
 
 
-    #region Handlers
+    #region State Handling
+
+    private void HandleStateChange()
+    {
+        if (_isInitializing)
+            return;
+
+        InvokeAsync(StateHasChanged);
+    }
+
     private async Task LoadUserIntoState()
     {
-        if (UiState.IsLoggedIn) return;
+        if (UiState.IsLoggedIn || UiState.UserData != null)
+            return;
 
-        var user = await authService.GetCurrentUserAsync();
-        if (user != null)
-            UiState.HandleUserLogin(user); 
+        try
+        {
+            var user = await authService.GetCurrentUserAsync();
 
+            if (user != null && !UiState.IsLoggedIn)
+            {
+                UiState.HandleUserLogin(user);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error loading user: {ex.Message}");
+        }
     }
 
-    private async void HandleChange()
-    {
-        await InvokeAsync(StateHasChanged);
-    }
+    #endregion
+
+
+    #region Search
 
     private async Task HandleKeyDown(KeyboardEventArgs e)
     {
@@ -425,10 +371,14 @@
             {
                 isSearching = true;
                 showDropdown = true;
-                await InvokeAsync(StateHasChanged);
 
                 var results = await questionService.SearchQuestionAsync(searchedValue);
-                searchResults = results; 
+
+                if (!searchResults.SequenceEqual(results))
+                {
+                    searchResults = results;
+                }
+
                 isSearching = false;
             }
             else
@@ -441,39 +391,41 @@
         }
         catch (TaskCanceledException)
         {
-
         }
     }
 
     public async Task HandleSearchQuestion()
     {
-        if (!string.IsNullOrEmpty(searchedValue))
-        {
-            isSearching = true;
-            showDropdown = true;
-            StateHasChanged();
+        if (string.IsNullOrWhiteSpace(searchedValue)) return;
 
-            var questions = await questionService.SearchQuestionAsync(searchedValue);
-            searchResults = questions;
-            isSearching = false;
-            // UiState.SetQuestions(questions);
-            StateHasChanged();
-        }
+        isSearching = true;
+        showDropdown = true;
+
+        var questions = await questionService.SearchQuestionAsync(searchedValue);
+
+        searchResults = questions;
+        isSearching = false;
+
+        await InvokeAsync(StateHasChanged);
     }
 
     private void HandleViewAll()
     {
-        if(viewResult)
-        {
-            takeLimit = 3;
-            viewResult = false;
-
-        }else
-        {
-            takeLimit = searchResults.Count;
-            viewResult = true;
-        }
+        viewResult = !viewResult;
+        takeLimit = viewResult ? searchResults.Count : 3;
     }
+
+    private string GetFooterText()
+    {
+        return viewResult
+        ? "Hide results"
+        : $"View all {searchResults.Count} results →";
+    }
+
+    #endregion
+
+
+    #region Data Loading
 
     public async Task FetchQuestionsAccTag(string selectedTag)
     {
@@ -484,32 +436,44 @@
     public async Task LoadHotQuestions()
     {
         var hotQuestions = await questionService.GetHotQuestionAsync();
-        if(hotQuestions != null)
+
+        if (hotQuestions != null && !hotQuesRes.SequenceEqual(hotQuestions))
         {
             hotQuesRes = hotQuestions;
         }
     }
 
-    private string GetFooterText()
-    {
-        return viewResult
-            ? "Hide results"
-            : $"View all {searchResults.Count} results →";
-    }
-
-    public void ToggleInbox() {
-        InboxDilog = !InboxDilog;
-    }
-    void HandleMessageClick(InboxDilog.InboxMessage msg) { /* navigate or open detail */ }
     #endregion
 
 
+    #region Inbox
 
+    public void ToggleInbox()
+    {
+    }
+
+    void HandleMessageClick(InboxDilog.InboxMessage msg)
+    {
+    }
+
+    #endregion
+
+
+    #region Dispose
+
+    public async Task Dispose()
+    {
+        UiState.OnChange -= HandleStateChange;
+        UiState.OnUserLoaded -= InitializeInbox;
+
+        _debounceToken?.Cancel();
+        _debounceToken?.Dispose();
+
+        _initializationToken?.Cancel();
+        _initializationToken?.Dispose();
+
+        await SignalR.DisposeAsync();
+    }
+
+    #endregion
 }
-
-
-
-
-
-
-

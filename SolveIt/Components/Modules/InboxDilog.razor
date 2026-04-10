@@ -2,7 +2,8 @@
 @inject NavigationManager NavManager
 @inject SolveIt.UI_state.UiStateService UiState
 @inject SolveIt.Services.AuthService authService
-@inject SolveIt.Services.ConversationService conversation
+@inject SolveIt.Services.ConversationService ConversationService
+@* @inject SolveIt.UI_state.SignalRService SignalR *@
 
 
 @if (IsOpen)
@@ -162,7 +163,7 @@
                 </div>
 
                 <div class="inbox-chat-body">
-                    <UserChat ChatId="@UserChat.ChatId" UserId="@UserChat.UserId" />
+                    <UserChat InboxId="@UserChat.InboxId" ReceiverId="@UserChat.UserId" Conversations="conversations" />
                 </div>
             }
 
@@ -272,11 +273,15 @@
     private bool HasUnread => UnreadCount > 0;
 
     private OpenedUserChat? UserChat = null;
+    private List<ConversationService.ConversationDto> conversations = [];
     private InboxMessage? ActiveMessage = null;
 
     private string _userQuery = string.Empty;
     private bool _showDropdown = false;
     private List<User> _searchResults = [];
+
+    private string _currentUserId = string.Empty;
+
 
 
 
@@ -293,7 +298,9 @@
 
     private void ToggleInbox() => IsOpen = !IsOpen;
     private void Close() => IsOpen = false;
-    private void CloseChat() { UserChat = null; ActiveMessage = null; }
+
+
+   
 
     private async Task OnInputChanged(ChangeEventArgs e)
     {
@@ -313,22 +320,67 @@
         StateHasChanged();
     }
 
+
+
+
+    // choosing new user for convo but handle the existing convo case handling already mean
+    // 1.  create new if not there other wise just return the existing chats and inboxId;
+
     private async Task SelectedUserForChat(User user)
     {
+        var myUserId = UiState.UserData!.Id;
+        var selectedUserId = user.Id;
+        var res = await ConversationService.CheckExistingConvo(myUserId, selectedUserId);
 
-        // first check already exsits a convo between them .  
-        var myUserId = UiState.UserData.Id;
-        var selectedUserId  = user.Id;
+        if (res != null)
+        {
+            _showDropdown = false;
+            _userQuery = string.Empty;
+            _searchResults.Clear();
 
-        var res = await conversation.CheckExistingConvo(myUserId, selectedUserId);
+            conversations = res.Conversations
+                .Select(c => new ConversationService.ConversationDto(
+                    ConversationId: c.ConversationId,
+                    InboxId: c.InboxId,
+                    SenderId: c.SenderId,
+                    ReceiverId: c.ReceiverId,
+                    Content: c.Content,
+                    SendedAt: c.SendedAt,
+                    Seen: c.Seen,
+                    Sender: new UserSummaryDto(
+                        AvatarUrl: c.Sender.AvatarUrl ?? string.Empty,
+                        DisplayName: c.Sender.DisplayName ?? string.Empty
+                    ),
+                    Receiver: new UserSummaryDto(
+                        AvatarUrl: c.Receiver.AvatarUrl ?? string.Empty,
+                        DisplayName: c.Receiver.DisplayName ?? string.Empty
+                    )
+                ))
+                .ToList();
 
-        _showDropdown = false;
-        _userQuery = string.Empty;
-        _searchResults.Clear();
-        UserChat = new OpenedUserChat { UserId = user.Id, ChatId = Guid.NewGuid().ToString() };
+            // if (SignalR.HubConnection is not null)
+            // {
+            //     await SignalR.HubConnection.SendAsync("JoinInbox", res.InboxId.ToString());
+            // }
 
+            UserChat = new OpenedUserChat
+                {
+                    UserId = user.Id,
+                    InboxId = res.InboxId
+                };
 
-        // ActiveMessage = new InboxMessage { User = new UserInboxDetails { UserId = ..., Username = user.DisplayName, AvatarUrl = user.AvatarUrl ?? "" } };
+            ActiveMessage = new InboxMessage
+                {
+                    User = new UserInboxDetails
+                    {
+                        UserId = user.Id,
+                        Username = user.DisplayName ?? string.Empty,
+                        AvatarUrl = user.AvatarUrl ?? string.Empty
+                    }
+                };
+
+          
+        }
     }
  
     private async Task OpenMessage(InboxMessage msg)
@@ -338,7 +390,7 @@
         UserChat = new OpenedUserChat
             {
                 UserId = msg.User?.UserId.ToString() ?? string.Empty,
-                ChatId = msg.ChatId
+                InboxId =msg.InboxId
             };
         await OnMessageClicked.InvokeAsync(msg);
     }
@@ -368,9 +420,20 @@
         return dt.ToString("MMM d");
     }
 
+  
+    private async Task CloseChat()
+    {
+        // if (UserChat is not null && SignalR.HubConnection is not null)
+        //     await SignalR.HubConnection.SendAsync("LeaveInbox", UserChat.InboxId.ToString());
+
+        UserChat = null;
+        ActiveMessage = null;
+    }
+    
+
     public class InboxMessage
     {
-        public string ChatId { get; set; } = Guid.NewGuid().ToString();
+        public Guid InboxId { get; set; }
         public UserInboxDetails? User { get; set; }
         public string RecentMessage { get; set; } = string.Empty;
         public bool IsRead { get; set; } = false;
@@ -379,7 +442,7 @@
 
     public class UserInboxDetails
     {
-        public required Guid UserId { get; set; }
+        public required string UserId { get; set; }
         public required string Username { get; set; }
         public required string AvatarUrl { get; set; }
     }
@@ -387,6 +450,16 @@
     public class OpenedUserChat
     {
         public required string UserId { get; set; }
-        public required string ChatId { get; set; }
+        public required Guid InboxId { get; set; }
     }
+
+
+    public record UserSummaryDto(
+        string AvatarUrl,
+        string DisplayName
+    );
+
+ 
+
+
 }

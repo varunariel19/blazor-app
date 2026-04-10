@@ -1,18 +1,19 @@
 ﻿@using SolveIt.Services
 @inject NavigationManager NavManager
 @inject SolveIt.UI_state.UiStateService UiState
-@inject SolveIt.Services.ConversationService Conversation
+@inject SolveIt.Services.ConversationService ConversationService
+@inject SolveIt.UI_state.SignalRService SignalR
 @inject IJSRuntime JS
 
 
 <div class="uc-root">
 
     <div class="uc-messages" @ref="_scrollRef">
-        @if (_messages.Count == 0)
+        @if (Conversations.Count == 0)
         {
             <div class="uc-empty">
                 <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"
-                     fill="none" stroke="currentColor" stroke-width="1.5">
+                fill="none" stroke="currentColor" stroke-width="1.5">
                     <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
                 </svg>
                 <p>No messages yet. Say hello!</p>
@@ -20,41 +21,39 @@
         }
         else
         {
-            @foreach (var msg in _messages)
+            @foreach (var msg in Conversations)
             {
                 bool isMine = msg.SenderId == _currentUserId;
-
                 <div class="uc-row @(isMine ? "uc-row--mine" : "uc-row--theirs")">
                     @if (!isMine)
                     {
                         <div class="uc-avatar-wrap">
-                            @if (!string.IsNullOrWhiteSpace(msg.AvatarUrl))
+                            @if (!string.IsNullOrWhiteSpace(msg.Sender.AvatarUrl))
                             {
-                                <img class="uc-avatar" src="@msg.AvatarUrl" alt="@msg.SenderName" />
+                                <img class="uc-avatar" src="@msg.Sender.AvatarUrl" alt="@msg.Sender.DisplayName" />
                             }
                             else
                             {
                                 <div class="uc-avatar uc-avatar--fallback">
-                                    @(msg.SenderName?.Substring(0, 1).ToUpper() ?? "?")
+                                    @(msg.Sender.DisplayName?.Substring(0, 1).ToUpper() ?? "?")
                                 </div>
                             }
                         </div>
                     }
-
                     <div class="uc-bubble-col @(isMine ? "uc-bubble-col--mine" : "")">
                         @if (!isMine)
                         {
-                            <span class="uc-sender-name">@msg.SenderName</span>
+                            <span class="uc-sender-name">@msg.Sender.DisplayName</span>
                         }
                         <div class="uc-bubble @(isMine ? "uc-bubble--mine" : "uc-bubble--theirs")">
-                            @msg.Text
+                            @msg.Content
                         </div>
                         <span class="uc-time @(isMine ? "uc-time--mine" : "")">
-                            @FormatTime(msg.SentAt)
+                            @FormatTime(msg.SendedAt)
                             @if (isMine)
                             {
                                 <span class="uc-status">
-                                    @if (msg.IsRead)
+                                    @if (msg.Seen)
                                     {
                                         <span title="Read">✓✓</span>
                                     }
@@ -73,18 +72,18 @@
 
     <div class="uc-input-bar">
         <textarea class="uc-textarea"
-                  placeholder="Type a message…"
-                  rows="1"
-                  @bind="_draft"
-                  @bind:event="oninput"
-                  @onkeydown="HandleKeyDown" />
+        placeholder="Type a message…"
+        rows="1"
+        @bind="_draft"
+        @bind:event="oninput"
+        @onkeydown="HandleKeyDown" />
         <button class="uc-send-btn"
-                disabled="@(string.IsNullOrWhiteSpace(_draft))"
-                @onclick="SendMessage"
-                title="Send">
+        disabled="@(string.IsNullOrWhiteSpace(_draft))"
+        @onclick="SendMessage"
+        title="Send">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
-                 fill="none" stroke="currentColor" stroke-width="2"
-                 stroke-linecap="round" stroke-linejoin="round">
+            fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
                 <line x1="22" y1="2" x2="11" y2="13" />
                 <polygon points="22 2 15 22 11 13 2 9 22 2" />
             </svg>
@@ -98,189 +97,189 @@
 <style>
 
     .uc-root {
-        display: flex;
-        flex-direction: column;
-        height: 100%;
-        background: #fff;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: #fff;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     }
 
     .uc-messages {
-        flex: 1;
-        overflow-y: auto;
-        padding: 12px 14px;
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-        scroll-behavior: smooth;
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    scroll-behavior: smooth;
     }
 
     .uc-empty {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        color: #9fa6ad;
-        gap: 8px;
-        padding: 24px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #9fa6ad;
+    gap: 8px;
+    padding: 24px;
     }
 
-        .uc-empty p {
-            margin: 0;
-            font-size: 13px;
-        }
+    .uc-empty p {
+    margin: 0;
+    font-size: 13px;
+    }
 
     .uc-row {
-        display: flex;
-        align-items: flex-end;
-        gap: 8px;
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
     }
 
     .uc-row--mine {
-        flex-direction: row-reverse;
+    flex-direction: row-reverse;
     }
 
     .uc-row--theirs {
-        flex-direction: row;
+    flex-direction: row;
     }
 
     .uc-avatar-wrap {
-        flex-shrink: 0;
+    flex-shrink: 0;
     }
 
     .uc-avatar {
-        width: 30px;
-        height: 30px;
-        border-radius: 50%;
-        object-fit: cover;
-        display: block;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
     }
 
     .uc-avatar--fallback {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: #0074cc;
-        color: #fff;
-        font-size: 12px;
-        font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #0074cc;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
     }
 
     .uc-bubble-col {
-        display: flex;
-        flex-direction: column;
-        gap: 3px;
-        max-width: 72%;
-        align-items: flex-start;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    max-width: 72%;
+    align-items: flex-start;
     }
 
     .uc-bubble-col--mine {
-        align-items: flex-end;
+    align-items: flex-end;
     }
 
     .uc-sender-name {
-        font-size: 11px;
-        font-weight: 600;
-        color: #6a737c;
-        padding-left: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #6a737c;
+    padding-left: 4px;
     }
 
     .uc-bubble {
-        padding: 8px 12px;
-        border-radius: 16px;
-        font-size: 13px;
-        line-height: 1.45;
-        word-break: break-word;
-        white-space: pre-wrap;
+    padding: 8px 12px;
+    border-radius: 16px;
+    font-size: 13px;
+    line-height: 1.45;
+    word-break: break-word;
+    white-space: pre-wrap;
     }
 
     .uc-bubble--theirs {
-        background: #f0f2f5;
-        color: #232629;
-        border-bottom-left-radius: 4px;
+    background: #f0f2f5;
+    color: #232629;
+    border-bottom-left-radius: 4px;
     }
 
     .uc-bubble--mine {
-        background: #0074cc;
-        color: #fff;
-        border-bottom-right-radius: 4px;
+    background: #0074cc;
+    color: #fff;
+    border-bottom-right-radius: 4px;
     }
 
     .uc-time {
-        font-size: 10px;
-        color: #9fa6ad;
-        padding: 0 4px;
+    font-size: 10px;
+    color: #9fa6ad;
+    padding: 0 4px;
     }
 
     .uc-time--mine {
-        text-align: right;
+    text-align: right;
     }
 
     .uc-status {
-        margin-left: 3px;
-        color: #90c8f0;
-        font-size: 11px;
+    margin-left: 3px;
+    color: #90c8f0;
+    font-size: 11px;
     }
 
     .uc-input-bar {
-        display: flex;
-        align-items: flex-end;
-        gap: 8px;
-        padding: 8px 10px;
-        border-top: 1px solid #e3e6e8;
-        background: #fafafa;
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    padding: 8px 10px;
+    border-top: 1px solid #e3e6e8;
+    background: #fafafa;
     }
 
     .uc-textarea {
-        flex: 1;
-        resize: none;
-        border: 1px solid #d6d9dc;
-        border-radius: 18px;
-        padding: 8px 14px;
-        font-size: 13px;
-        font-family: inherit;
-        line-height: 1.4;
-        color: #232629;
-        background: #fff;
-        outline: none;
-        max-height: 100px;
-        overflow-y: auto;
-        transition: border-color .15s;
+    flex: 1;
+    resize: none;
+    border: 1px solid #d6d9dc;
+    border-radius: 18px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-family: inherit;
+    line-height: 1.4;
+    color: #232629;
+    background: #fff;
+    outline: none;
+    max-height: 100px;
+    overflow-y: auto;
+    transition: border-color .15s;
     }
 
-        .uc-textarea:focus {
-            border-color: #0074cc;
-        }
+    .uc-textarea:focus {
+    border-color: #0074cc;
+    }
 
-        .uc-textarea::placeholder {
-            color: #9fa6ad;
-        }
+    .uc-textarea::placeholder {
+    color: #9fa6ad;
+    }
 
     .uc-send-btn {
-        flex-shrink: 0;
-        width: 36px;
-        height: 36px;
-        border: none;
-        border-radius: 50%;
-        background: #0074cc;
-        color: #fff;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        transition: background .15s, transform .1s;
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 50%;
+    background: #0074cc;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background .15s, transform .1s;
     }
 
-        .uc-send-btn:hover:not(:disabled) {
-            background: #0063b1;
-            transform: scale(1.05);
-        }
+    .uc-send-btn:hover:not(:disabled) {
+    background: #0063b1;
+    transform: scale(1.05);
+    }
 
-        .uc-send-btn:disabled {
-            background: #c8d0d8;
-            cursor: not-allowed;
-        }
+    .uc-send-btn:disabled {
+    background: #c8d0d8;
+    cursor: not-allowed;
+    }
 
 
 </style>
@@ -288,12 +287,11 @@
 
 
 @code {
-    [Parameter] public string ChatId { get; set; } = string.Empty;
-    [Parameter] public string UserId { get; set; } = string.Empty;
+    [Parameter] public Guid InboxId { get; set; } = Guid.Empty;
+    [Parameter] public string ReceiverId { get; set; } = string.Empty;
+    [Parameter] public List<ConversationService.ConversationDto> Conversations { get; set; } = [];
 
-    private string _currentUserId = "me";
-
-    private List<ChatMessage> _messages = new();
+    private string _currentUserId = string.Empty;
     private string _draft = string.Empty;
     private ElementReference _scrollRef;
 
@@ -303,92 +301,69 @@
     private User? _selectedUser = null;
     private List<User> _searchResults = [];
 
-    private async Task OnUserQueryChanged(ChangeEventArgs e)
+    protected override Task OnAfterRenderAsync(bool firstRender)
     {
-        _userQuery = e.Value?.ToString() ?? string.Empty;
-        if (_userQuery.Length < 2) { _searchResults.Clear(); return; }
-
-  
-        // _searchResults = await _userService.SearchUsersAsync(_userQuery);
-        _showDropdown = _searchResults.Any();
+        // await JS.InvokeVoidAsync("scrollToBottom", _scrollRef);
+        return Task.CompletedTask;
     }
 
-    private async Task SelectUser(User user)
+    protected override async Task OnInitializedAsync()
     {
-        _selectedUser = user;
-        _showDropdown = false;
-        _userQuery = string.Empty;
-        _searchResults.Clear();
 
-     
-        // await LoadConversationAsync(user.Id);
+        _currentUserId = UiState.UserData!.Id;
+
+        await base.OnInitializedAsync();
     }
+
 
     private void ClearUser()
     {
         _selectedUser = null;
-        _messages.Clear();
+        Conversations.Clear();
     }
 
     protected override void OnInitialized()
     {
 
         // get all the message of that user where I am the receiver . 
-        // _messages = await ChatService.GetMessagesAsync(ChatId);
 
-        // _messages = new List<ChatMessage>
-        // {
-        //     new() {
-        //         Id = "1", SenderId = UserId, SenderName = "AliceTech",
-        //         AvatarUrl = $"https:i.pravatar.cc/150?u={UserId}",
-        //         Text = "Hey! Did you see the new documentation I uploaded?",
-        //         SentAt = DateTime.Now.AddMinutes(-10), IsRead = true
-        //     },
-        //     new() {
-        //         Id = "2", SenderId = _currentUserId, SenderName = "Me",
-        //         Text = "Yes! Looks great. Really clear explanation.",
-        //         SentAt = DateTime.Now.AddMinutes(-8), IsRead = true
-        //     },
-        //     new() {
-        //         Id = "3", SenderId = UserId, SenderName = "AliceTech",
-        //         AvatarUrl = $"https:i.pravatar.cc/150?u={UserId}",
-        //         Text = "Thanks 😊 Let me know if anything needs updating.",
-        //         SentAt = DateTime.Now.AddMinutes(-5), IsRead = false
-        //     },
-        // };
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        
-        // await JS.InvokeVoidAsync("scrollToBottom", _scrollRef);
-    }
-
-    private void SendMessage()
+    private async Task SendMessage()
     {
         var text = _draft.Trim();
         if (string.IsNullOrWhiteSpace(text)) return;
 
-        _messages.Add(new ChatMessage
-            {
-                Id = Guid.NewGuid().ToString(),
-                SenderId = _currentUserId,
-                SenderName = "Me",
-                Text = text,
-                SentAt = DateTime.Now,
-                IsRead = false
-            });
+        var message = new ConversationService.ConversationDto(
+            ConversationId: Guid.NewGuid(),
+            InboxId:InboxId,
+            SenderId: _currentUserId,
+            ReceiverId: ReceiverId,
+            Content: text,
+            SendedAt: DateTime.Now,
+            Seen: false,
+            Sender: new InboxDilog.UserSummaryDto(
+                AvatarUrl: UiState.UserData!.AvatarUrl ?? string.Empty,
+                DisplayName: UiState.UserData!.DisplayName ?? string.Empty
+            ),
+            Receiver: new InboxDilog.UserSummaryDto(
+                AvatarUrl:  string.Empty,
+                DisplayName:  string.Empty
+            )
+        );
 
+        Conversations.Add(message);
         _draft = string.Empty;
 
-         await Conversation.SendMessageAsync(ChatId, text);
+        await ConversationService.SendMessageAsync(message);
     }
 
-    private void HandleKeyDown(KeyboardEventArgs e)
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
     {
         if (e.Key == "Enter" && !e.ShiftKey)
         {
-            SendMessage();
+            await SendMessage();
         }
     }
 
@@ -401,14 +376,5 @@
         return dt.ToString("MMM d, h:mm tt");
     }
 
-    public class ChatMessage
-    {
-        public string Id { get; set; } = Guid.NewGuid().ToString();
-        public string SenderId { get; set; } = string.Empty;
-        public string SenderName { get; set; } = string.Empty;
-        public string? AvatarUrl { get; set; }
-        public string Text { get; set; } = string.Empty;
-        public DateTime SentAt { get; set; } = DateTime.Now;
-        public bool IsRead { get; set; } = false;
-    }
+
 }

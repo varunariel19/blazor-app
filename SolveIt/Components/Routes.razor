@@ -13,3 +13,25 @@
         </LayoutView>
     </NotFound>
 </Router>
+
+@* <ErrorBoundary @ref="_errorBoundary">
+    <ChildContent>
+        <Router AppAssembly="typeof(App).Assembly">
+            <Found Context="routeData">
+                <RouteView RouteData="routeData" DefaultLayout="typeof(MainLayout)" />
+            </Found>
+            <NotFound>
+                <p>Page not found.</p>
+            </NotFound>
+        </Router>
+    </ChildContent>
+    <ErrorContent Context="ex">
+        <p style="color:red">⚠️ @ex.Message</p>
+        <pre>@ex.StackTrace</pre>
+    </ErrorContent>
+</ErrorBoundary>
+
+@code {
+    private ErrorBoundary? _errorBoundary;
+}
+ *@

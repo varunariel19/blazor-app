@@ -50,7 +50,7 @@
                             <img src="@(q.User?.AvatarUrl ?? "https://api.dicebear.com/7.x/shapes/svg?seed=default")"
                             class="author-avatar" />
                             <span class="author-name">
-                                @(q.User.DisplayName ?? "Unknown")
+                                @(q.User?.DisplayName ?? "Unknown")
                             </span>
                         </div>
 
@@ -144,30 +144,30 @@
         UiState.OnChange -= HandleChange;
     }
 
-    private async Task FetchMyQuestions(int page)
-    {
-        var userId = UiState.UserData?.Id;
-
-        if (string.IsNullOrEmpty(userId))
+        private async Task FetchMyQuestions(int page)
         {
+            var userId = UiState.UserData?.Id;
 
-            var user = await authService.GetCurrentUserAsync();
-            userId = user!.Id;
-            UiState.PresistUserState(user);
+            if (string.IsNullOrEmpty(userId))
+            {
+
+                // var user = await authService.GetCurrentUserAsync();
+                // userId = user!.Id;
+                // UiState.PresistUserState(user);
+            }
+
+            // reset the questions
+            UiState.SetQuestions(null);
+            var res = await QuestionService.GetQuestionsByUserAsync(userId, page, PageSize);
+
+            MyQuestions = res.Questions;
+            TotalQues = res.totalQues ?? 0;
+
+            if (res.TotalPages.HasValue)
+                TotalPages = res.TotalPages.Value;
+
+            CurrentPage = page;
         }
-
-        // reset the questions
-        UiState.SetQuestions(null);
-        var res = await QuestionService.GetQuestionsByUserAsync(userId, page, PageSize);
-
-        MyQuestions = res.Questions;
-        TotalQues = res.totalQues ?? 0;
-
-        if (res.TotalPages.HasValue)
-            TotalPages = res.TotalPages.Value;
-
-        CurrentPage = page;
-    }
 
     private async Task ChangePage(int page)
     {

@@ -12,6 +12,7 @@ public class AuthService(UserManager<User> userManager , AuthenticationStateProv
 {
     private readonly UserManager<User> _userManager = userManager;
     private readonly  AuthenticationStateProvider _authProvider = authProvider;
+    private readonly IDbContextFactory<AppDbContext> _contextFactory = contextFactory;
 
 
     private static readonly string[] Avatars =
@@ -51,18 +52,28 @@ public class AuthService(UserManager<User> userManager , AuthenticationStateProv
 
     public async Task<User?> GetCurrentUserAsync()
     {
-        var authState = await _authProvider.GetAuthenticationStateAsync();
-        var claims = authState.User;
+        try
+        {
+            var authState = await _authProvider.GetAuthenticationStateAsync();
+            var claims = authState.User;
 
-        if (claims.Identity?.IsAuthenticated != true)
+            if (claims.Identity?.IsAuthenticated != true)
+                return null;
+
+            var email = claims.FindFirst(ClaimTypes.Email)?.Value;
+
+            if (string.IsNullOrEmpty(email))
+                return null;
+
+            // Use the context factory to get a fresh DbContext to avoid concurrency issues
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.Users.FirstOrDefaultAsync(u => u.Email == email);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error in GetCurrentUserAsync: {ex.Message}");
             return null;
-
-        var email = claims.FindFirst(ClaimTypes.Email)?.Value;
-
-        if (string.IsNullOrEmpty(email))
-            return null;
-
-        return await _userManager.FindByEmailAsync(email);
+        }
     }
 
 

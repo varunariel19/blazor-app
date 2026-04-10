@@ -102,9 +102,9 @@
             }
             else
             {
-                var user = await AuthService.GetCurrentUserAsync();
-                if (user != null)
-                    userId = user.Id;
+                // var user = await AuthService.GetCurrentUserAsync();
+                // if (user != null)
+                //     userId = user.Id;
             }
 
             if (userId == String.Empty) return;
@@ -117,6 +117,7 @@
         }
         catch (Exception ex)
         {
+            Console.Error.WriteLine($"[Error] {ex.Message}");
             ShowToast("Failed to load saved questions.", ToastType.Error);
         }
         finally

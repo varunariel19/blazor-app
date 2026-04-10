@@ -56,13 +56,13 @@ namespace SolveIt.Components.Pages
 
                     if (!string.IsNullOrEmpty(email))
                     {
-                        var user = await UserManager.FindByEmailAsync(email);
+                        //var user = await UserManager.FindByEmailAsync(email);
 
-                        if (user != null)
-                        {
-                            currentUser = user;
-                            UiState.HandleUserLogin(user);
-                        }
+                        //if (user != null)
+                        //{
+                        //    currentUser = user;
+                        //    UiState.HandleUserLogin(user);
+                        //}
                     }
                 }
             }
