@@ -1,10 +1,10 @@
 ﻿@using SolveIt.Services
+@implements IAsyncDisposable
 @inject NavigationManager NavManager
 @inject SolveIt.UI_state.UiStateService UiState
 @inject SolveIt.Services.AuthService authService
 @inject SolveIt.Services.ConversationService ConversationService
-@* @inject SolveIt.UI_state.SignalRService SignalR *@
-
+@inject SolveIt.Services.SignalRService SignalR
 
 @if (IsOpen)
 {
@@ -27,7 +27,6 @@
     @if (IsOpen)
     {
         <div class="inbox-dropdown">
-
             @if (UserChat == null)
             {
                 <div class="inbox-header">
@@ -52,7 +51,7 @@
                     placeholder="New conversation…"
                     value="@_userQuery"
                     @oninput="OnInputChanged"
-                    @onfocus="() => _showDropdown = true" />
+                    @onfocus="() => _showDropdown = _searchResults.Any()" />
 
                     @if (_showDropdown && _searchResults.Any())
                     {
@@ -81,7 +80,7 @@
                 </div>
 
                 <div class="inbox-messages">
-                    @if (Messages == null || !Messages.Any())
+                    @if (!UiState.InboxMessages.Any() || UiState.InboxMessages.Count == 0)
                     {
                         <div class="inbox-empty">
                             <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24"
@@ -94,11 +93,9 @@
                     }
                     else
                     {
-                        @foreach (var msg in Messages)
+                        @foreach (var msg in UiState.InboxMessages)
                         {
-                            <div class="inbox-item @(!msg.IsRead ? "unread" : "")"
-                            @onclick="() => OpenMessage(msg)">
-
+                            <div class="inbox-item @(!msg.IsRead ? "unread" : "")" @onclick="() => OpenMessage(msg)">
                                 <div class="inbox-avatar-wrap">
                                     @if (!msg.IsRead)
                                     {
@@ -106,27 +103,32 @@
                                     }
                                     @if (!string.IsNullOrWhiteSpace(msg.User?.AvatarUrl))
                                     {
-                                        <img class="inbox-avatar" src="@msg.User.AvatarUrl"
-                                        alt="@msg.User.Username" />
+                                        <img class="inbox-avatar" src="@msg.User.AvatarUrl" alt="@msg.User.Username" />
                                     }
                                     else
                                     {
                                         <div class="inbox-avatar inbox-avatar-fallback">
-                                            @(msg.User?.Username?.Substring(0, 1).ToUpper() ?? "?")
+                                            @(msg.User?.Username)
                                         </div>
                                     }
                                 </div>
-
                                 <div class="inbox-item-body">
                                     <div class="inbox-item-header-row">
                                         <span class="inbox-item-username">@(msg.User?.Username ?? "Unknown")</span>
                                         <span class="inbox-item-time">@FormatTime(msg.ReceivedAt)</span>
                                     </div>
                                     <div class="inbox-item-preview @(!msg.IsRead ? "preview-bold" : "")">
+                                        @if (msg.LastMsgUserId == UiState.UserData!.Id)
+                                        {
+                                            <span class="preview-prefix">You: </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="preview-prefix">@msg.User?.Username: </span>
+                                        }
                                         @msg.RecentMessage
                                     </div>
                                 </div>
-
                                 @if (!msg.IsRead)
                                 {
                                     <button class="inbox-item-read-btn" title="Mark as read"
@@ -138,7 +140,6 @@
                             </div>
                         }
                     }
-
                 </div>
 
                 <div class="inbox-footer">
@@ -161,19 +162,15 @@
                         <span class="inbox-chat-username">@ActiveMessage?.User?.Username</span>
                     </div>
                 </div>
-
                 <div class="inbox-chat-body">
-                    <UserChat InboxId="@UserChat.InboxId" ReceiverId="@UserChat.UserId" Conversations="conversations" />
+                    <UserChat SelectedUser="@UserChat" Conversations="conversations" />
                 </div>
             }
-
         </div>
     }
 </div>
 
-
 <style>
-    /* ── Search bar ── */
     .inbox-search-wrap {
     position: relative;
     padding: 8px 12px;
@@ -212,7 +209,6 @@
     color: #9fa6ad;
     }
 
-    /* ── Search dropdown ── */
     .inbox-search-dropdown {
     position: absolute;
     top: calc(100% - 8px);
@@ -224,7 +220,7 @@
     z-index: 200;
     overflow-x: hidden;
     overflow-y: auto;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.10);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.10);
     }
 
     .inbox-search-item {
@@ -260,47 +256,222 @@
     font-size: 11px;
     color: #9fa6ad;
     }
+
+
+    .inbox-item {
+    display: flex;
+    align-items: flex-start; 
+    padding: 12px;
+    gap: 12px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    border-bottom: 1px solid #f1f2f3;
+    text-align: left; 
+    }
+
+    .inbox-item:hover {
+    background-color: #f8f9fa;
+    }
+
+    .inbox-avatar-wrap {
+    position: relative;
+    flex-shrink: 0; 
+    }
+
+    .inbox-item-body {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    flex-grow: 1;
+    overflow: hidden; 
+    }
+
+    .inbox-item-header-row {
+    display: flex;
+    justify-content: space-between; 
+    width: 100%;
+    margin-bottom: 2px;
+    }
+
+    .inbox-item-username {
+    font-size: 14px;
+    font-weight: 700;
+    color: #2c3e50;
+    }
+
+    .inbox-item-time {
+    font-size: 11px;
+    color: #8a949b;
+    }
+
+    .inbox-item-preview {
+    font-size: 13px;
+    color: #5f6368;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 1; 
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-align: left;
+    }
+
+    .preview-prefix {
+    font-weight: 600;
+    color: #3d4246;
+    margin-right: 2px;
+    }
+
+    .preview-bold {
+    color: #1a1a1b;
+    font-weight: 500;
+    }
+
+    .unread-dot {
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    width: 10px;
+    height: 10px;
+    background-color: #0074cc;
+    border: 2px solid white;
+    border-radius: 50%;
+    z-index: 1;
+    }
 </style>
 
 @code {
-    [Parameter] public List<InboxMessage> Messages { get; set; } = new();
     [Parameter] public string FilterLabel { get; set; } = "ALL";
-    [Parameter] public EventCallback<InboxMessage> OnMessageClicked { get; set; }
+    [Parameter] public EventCallback<ConversationService.InboxMessage> OnMessageClicked { get; set; }
     [Parameter] public EventCallback OnViewAll { get; set; }
 
     private bool IsOpen { get; set; } = false;
-    private int UnreadCount => Messages?.Count(m => !m.IsRead) ?? 0;
+    private int UnreadCount => UiState.InboxMessages?.Count(m => !m.IsRead) ?? 0;
     private bool HasUnread => UnreadCount > 0;
 
-    private OpenedUserChat? UserChat = null;
+
+    private ConversationService.OpenedUserChat? UserChat = null;
     private List<ConversationService.ConversationDto> conversations = [];
-    private InboxMessage? ActiveMessage = null;
+    private ConversationService.InboxMessage? ActiveMessage = null;
 
     private string _userQuery = string.Empty;
     private bool _showDropdown = false;
     private List<User> _searchResults = [];
 
     private string _currentUserId = string.Empty;
-
-
-
+    private bool _firstRender = true;
 
     public string InputValue
     {
         get => _userQuery;
-        set
+        set { if (_userQuery != value) _userQuery = value; }
+    }
+
+    protected override void OnInitialized()
+    {
+        _currentUserId = UiState.UserData?.Id ?? string.Empty;
+
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        _firstRender = false;
+
+        _currentUserId = UiState.UserData?.Id ?? string.Empty;
+        SignalR.OnMessageReceived += HandleMessage;
+        SignalR.OnMsgRead += HandleMsgReaded;
+        await Task.CompletedTask;
+    }
+
+    private void HandleMessage(ConversationService.ConversationDto message)
+    {
+        InvokeAsync(async () =>
         {
-            if (_userQuery == value) return;
-            _userQuery = value;
-        }
+            try
+            {
+                if (message.SenderId == _currentUserId) return;
+                if (conversations.Any(m => m.ConversationId == message.ConversationId)) return;
+
+                // check any chat window opened or not 
+                if (UserChat != null && message.InboxId == UserChat.InboxId)
+                {
+                    conversations.Add(message);
+                    // send real time read status of that particular msg that the other user have just sent . 
+                    await SignalR.NotifyMsgReaded(message.InboxId , message.SenderId);
+                    Console.WriteLine($"[InboxDilog] Message added to chat: {message.Content}");
+                }
+
+                // otherwise list that updated message on the inbox
+                else
+                {
+                    var existingMsg = UiState.InboxMessages.FirstOrDefault(m => m.InboxId == message.InboxId);
+                    if (existingMsg != null)
+                    {
+                        existingMsg.LastMsgUserId = message.SenderId;
+                        existingMsg.RecentMessage = message.Content;
+                        existingMsg.ReceivedAt = message.SendedAt;
+                        existingMsg.IsRead = false;
+                        UiState.ArrangeOrInsertInboxItem(existingMsg);
+                    }
+                    else
+                    {
+                        var newInbox = new ConversationService.InboxMessage
+                            {
+                                InboxId = message.InboxId,
+                                LastMsgUserId = message.SenderId,
+                                User = new ConversationService.UserInboxDetails
+                                {
+                                    UserId = message.SenderId,
+                                    Username = message.Sender.DisplayName,
+                                    AvatarUrl = message.Sender.AvatarUrl
+                                },
+                                RecentMessage = message.Content,
+                                ReceivedAt = message.SendedAt,
+                                IsRead = false
+                            };
+                        UiState.ArrangeOrInsertInboxItem(newInbox);
+
+                    }
+                }
+
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[InboxDilog] Error in HandleMessage: {ex.Message}");
+            }
+        });
+    }
+  
+    private void HandleMsgReaded(Guid InboxId, string UserId)
+    {
+        InvokeAsync(async () =>
+        {
+            try
+            {
+                var unseenConversations = conversations.Where(c =>
+                    c.InboxId == InboxId &&
+                    c.ReceiverId == UserId &&
+                    c.Seen == false).ToList();
+
+                if (unseenConversations.Any())
+                {
+                    unseenConversations = unseenConversations
+                     .Select(c => c with { Seen = true })
+                     .ToList();
+                    StateHasChanged();
+                }
+            }
+            catch (Exception ex)
+            {
+                
+            }
+        });
     }
 
 
     private void ToggleInbox() => IsOpen = !IsOpen;
     private void Close() => IsOpen = false;
-
-
-   
 
     private async Task OnInputChanged(ChangeEventArgs e)
     {
@@ -320,87 +491,115 @@
         StateHasChanged();
     }
 
-
-
-
-    // choosing new user for convo but handle the existing convo case handling already mean
-    // 1.  create new if not there other wise just return the existing chats and inboxId;
-
     private async Task SelectedUserForChat(User user)
     {
         var myUserId = UiState.UserData!.Id;
-        var selectedUserId = user.Id;
-        var res = await ConversationService.CheckExistingConvo(myUserId, selectedUserId);
+        var res = await ConversationService.CheckExistingConvo(myUserId, user.Id);
 
-        if (res != null)
-        {
-            _showDropdown = false;
-            _userQuery = string.Empty;
-            _searchResults.Clear();
+        if (res == null) return;
 
-            conversations = res.Conversations
-                .Select(c => new ConversationService.ConversationDto(
-                    ConversationId: c.ConversationId,
-                    InboxId: c.InboxId,
-                    SenderId: c.SenderId,
-                    ReceiverId: c.ReceiverId,
-                    Content: c.Content,
-                    SendedAt: c.SendedAt,
-                    Seen: c.Seen,
-                    Sender: new UserSummaryDto(
-                        AvatarUrl: c.Sender.AvatarUrl ?? string.Empty,
-                        DisplayName: c.Sender.DisplayName ?? string.Empty
-                    ),
-                    Receiver: new UserSummaryDto(
-                        AvatarUrl: c.Receiver.AvatarUrl ?? string.Empty,
-                        DisplayName: c.Receiver.DisplayName ?? string.Empty
-                    )
-                ))
-                .ToList();
+        _showDropdown = false;
+        _userQuery = string.Empty;
+        _searchResults.Clear();
 
-            // if (SignalR.HubConnection is not null)
-            // {
-            //     await SignalR.HubConnection.SendAsync("JoinInbox", res.InboxId.ToString());
-            // }
+        conversations = res.Conversations
+            .Select(c => new ConversationService.ConversationDto(
+                ConversationId: c.ConversationId,
+                InboxId: c.InboxId,
+                SenderId: c.SenderId,
+                ReceiverId: c.ReceiverId,
+                Content: c.Content,
+                SendedAt: c.SendedAt,
+                Seen: c.Seen,
+                Sender: new ConversationService.UserSummaryDto(
+                    AvatarUrl: c.Sender.AvatarUrl ?? string.Empty,
+                    DisplayName: c.Sender.DisplayName ?? string.Empty
+                ),
+                Receiver: new ConversationService.UserSummaryDto(
+                    AvatarUrl: c.Receiver.AvatarUrl ?? string.Empty,
+                    DisplayName: c.Receiver.DisplayName ?? string.Empty
+                )
+            ))
+            .ToList();
 
-            UserChat = new OpenedUserChat
+        UserChat = new ConversationService.OpenedUserChat { 
+            UserId = user.Id, 
+            InboxId = res.InboxId ,
+            Username = user.DisplayName ,
+            AvatarUrl = user.AvatarUrl 
+        };
+        ActiveMessage = new ConversationService.InboxMessage
+            {
+                User = new ConversationService.UserInboxDetails
                 {
                     UserId = user.Id,
-                    InboxId = res.InboxId
-                };
+                    Username = user.DisplayName ?? string.Empty,
+                    AvatarUrl = user.AvatarUrl ?? string.Empty
+                }
+            };
 
-            ActiveMessage = new InboxMessage
-                {
-                    User = new UserInboxDetails
-                    {
-                        UserId = user.Id,
-                        Username = user.DisplayName ?? string.Empty,
-                        AvatarUrl = user.AvatarUrl ?? string.Empty
-                    }
-                };
-
-          
-        }
     }
- 
-    private async Task OpenMessage(InboxMessage msg)
+
+
+    private async Task OpenMessage(ConversationService.InboxMessage msg)
     {
         msg.IsRead = true;
+
+        // load existing chats 
+
+        var myUserId = UiState.UserData!.Id;
+        var res = await ConversationService.RetreiveAllConversationsAsync(msg.InboxId);
+
+        if (res == null) return;
+
+        _showDropdown = false;
+        _userQuery = string.Empty;
+        _searchResults.Clear();
+
+        conversations = res
+            .Select(c => new ConversationService.ConversationDto(
+                ConversationId: c.ConversationId,
+                InboxId: c.InboxId,
+                SenderId: c.SenderId,
+                ReceiverId: c.ReceiverId,
+                Content: c.Content,
+                SendedAt: c.SendedAt,
+                Seen: c.Seen,
+                Sender: new ConversationService.UserSummaryDto(
+                    AvatarUrl: c.Sender.AvatarUrl ?? string.Empty,
+                    DisplayName: c.Sender.DisplayName ?? string.Empty
+                ),
+                Receiver: new ConversationService.UserSummaryDto(
+                    AvatarUrl: c.Receiver.AvatarUrl ?? string.Empty,
+                    DisplayName: c.Receiver.DisplayName ?? string.Empty
+                )
+            ))
+            .ToList();
+
         ActiveMessage = msg;
-        UserChat = new OpenedUserChat
+        UserChat = new ConversationService.OpenedUserChat
             {
-                UserId = msg.User?.UserId.ToString() ?? string.Empty,
-                InboxId =msg.InboxId
+                UserId = msg.User?.UserId ?? string.Empty,
+                InboxId = msg.InboxId,
+                Username = msg.User.Username,
+                AvatarUrl = msg.User.AvatarUrl,
+
             };
         await OnMessageClicked.InvokeAsync(msg);
+        await MarkRead(msg);
     }
 
-    private void MarkRead(InboxMessage msg) => msg.IsRead = true;
-
-    private void MarkAllRead()
+    private async Task MarkRead(ConversationService.InboxMessage msg)
     {
-        if (Messages == null) return;
-        foreach (var m in Messages) m.IsRead = true;
+        msg.IsRead = true;
+        await ConversationService.ReadMessages(msg.InboxId , _currentUserId);
+    }
+
+    private async Task MarkAllRead()
+    {
+        foreach (var m in UiState.InboxMessages) m.IsRead = true;
+
+        await ConversationService.ReadAllMessages(_currentUserId , Guid.Empty);
     }
 
     private async Task GoToFullInbox()
@@ -420,46 +619,20 @@
         return dt.ToString("MMM d");
     }
 
-  
-    private async Task CloseChat()
+    private void CloseChat()
     {
-        // if (UserChat is not null && SignalR.HubConnection is not null)
-        //     await SignalR.HubConnection.SendAsync("LeaveInbox", UserChat.InboxId.ToString());
-
         UserChat = null;
         ActiveMessage = null;
+        conversations = [];    
+        StateHasChanged();
     }
-    
 
-    public class InboxMessage
+    public async ValueTask DisposeAsync()
     {
-        public Guid InboxId { get; set; }
-        public UserInboxDetails? User { get; set; }
-        public string RecentMessage { get; set; } = string.Empty;
-        public bool IsRead { get; set; } = false;
-        public DateTime ReceivedAt { get; set; } = DateTime.Now;
-    }
-
-    public class UserInboxDetails
-    {
-        public required string UserId { get; set; }
-        public required string Username { get; set; }
-        public required string AvatarUrl { get; set; }
-    }
-
-    public class OpenedUserChat
-    {
-        public required string UserId { get; set; }
-        public required Guid InboxId { get; set; }
+        SignalR.OnMessageReceived -= HandleMessage;
+        await Task.CompletedTask;
     }
 
 
-    public record UserSummaryDto(
-        string AvatarUrl,
-        string DisplayName
-    );
-
- 
-
-
+   
 }

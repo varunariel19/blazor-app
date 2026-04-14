@@ -1,24 +1,55 @@
 ﻿using Microsoft.AspNetCore.SignalR;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 
 namespace SolveIt.Hubs
 {
+    [Authorize]
     public class ChatHub : Hub
     {
-        public async Task JoinInbox(string inboxId)
+        private const string UserIdPrefix = "user-";
+
+        public string? GetMyUserId()
         {
-            await Groups.AddToGroupAsync(Context.ConnectionId, inboxId);
+            return Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         }
 
-        // Leave the inbox room
-        public async Task LeaveInbox(string inboxId)
+        public override async Task OnConnectedAsync()
         {
-            await Groups.RemoveFromGroupAsync(Context.ConnectionId, inboxId);
+
+            string? userId = null;
+            if (Context.User?.Identity?.IsAuthenticated == true)
+            {
+                userId = Context.UserIdentifier;
+            }
+            var connectionId = Context.ConnectionId;
+            
+            if (!string.IsNullOrEmpty(userId))
+            {
+                Console.WriteLine($"[ChatHub] User Connected - UserId: {userId}, ConnectionId: {connectionId}");
+                await Groups.AddToGroupAsync(connectionId, UserIdPrefix + userId);
+            }
+            else
+            {
+                Console.WriteLine($"[ChatHub] Anonymous Connected - ConnectionId: {connectionId}");
+            }
+
+            await base.OnConnectedAsync();
         }
 
-        // Send message to everyone in the inbox group
-        public async Task SendMessage(string inboxId, object message)
+        public async Task MsgRead(Guid inboxId , string userId)
         {
-            await Clients.Group(inboxId).SendAsync("ReceiveMessage", message);
+         
+            await Clients
+                .Group(UserIdPrefix + userId)
+                .SendAsync("MsgReaded", inboxId);
+        }
+
+        public override async Task OnDisconnectedAsync(Exception? exception)
+        {
+            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            Console.WriteLine($"[ChatHub] Disconnected - UserId: {userId}, ConnectionId: {Context.ConnectionId}, Exception: {exception?.Message}");
+            await base.OnDisconnectedAsync(exception);
         }
     }
 }

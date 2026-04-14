@@ -1,4 +1,5 @@
 ﻿using SolveIt.Models;
+using SolveIt.Services;
 
 
 namespace SolveIt.UI_state
@@ -6,8 +7,12 @@ namespace SolveIt.UI_state
     public class UiStateService
     {
         #region Variables 
-        public List<Question> Questions => _questions;
         private List<Question> _questions = [];
+        public List<Question> Questions => _questions;
+
+        private List<ConversationService.InboxMessage> _inboxMessages = [];
+        public List<ConversationService.InboxMessage> InboxMessages => _inboxMessages;
+
         public bool IsLoggedIn = false;
         private User? _user = null;
         public User? UserData => _user;
@@ -57,25 +62,72 @@ namespace SolveIt.UI_state
             Notify();
         }
 
-    
         public void DestroyUserState()
         {
             _user = null;
             Notify();
         }
 
-        public void HandleUserLogin(User user)
+        public async Task HandleUserLogin(User user)
         {
             IsLoggedIn = true;
-            _user = user;  // Set user directly WITHOUT calling Notify()
-            NotifyUserLoaded();  // Only fire the user loaded event, don't trigger OnChange yet
+            _user = user; 
+            await NotifyUserLoaded(); 
         }
+
+
+        public void ArrangeOrInsertInboxItem(ConversationService.InboxMessage inboxMessage)
+        {
+            var idx = _inboxMessages.FindIndex(x => x.InboxId == inboxMessage.InboxId);
+
+            if(idx != -1)
+            {
+                MoveToTop(idx);
+            }
+            else
+            {
+                _inboxMessages.Insert(0 , inboxMessage);
+            }
+
+            Notify();
+        }
+
+        public void SetInbox(List<ConversationService.InboxMessage> inboxMessages)
+        {
+            _inboxMessages = inboxMessages;
+            Notify();
+        }
+
+
+        public void ArrangeInboxItemsOrder()
+        {
+            _inboxMessages = [.. _inboxMessages.OrderByDescending(x => x.ReceivedAt)];
+            Notify();
+        }
+
+        public void MoveToTop(int idx)
+        {
+            if (idx <= 0) return;
+
+            var item = _inboxMessages[idx];
+            _inboxMessages.RemoveAt(idx);
+            _inboxMessages.Insert(0, item);
+
+        }
+
 
         #endregion
 
+
+
+
+
+
+
+
         private void Notify() => OnChange?.Invoke();
 
-        private async void NotifyUserLoaded()
+        private async Task NotifyUserLoaded()
         {
             if (OnUserLoaded is not null)
             {

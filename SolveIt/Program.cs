@@ -9,12 +9,9 @@ using SolveIt.Services;
 using SolveIt.UI_state;
 using Microsoft.AspNetCore.ResponseCompression;
 
-
-
 var builder = WebApplication.CreateBuilder(args);
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-
 builder.Services.AddDbContextFactory<AppDbContext>(options =>
     options.UseSqlServer(connectionString));
 
@@ -37,33 +34,50 @@ builder.Services.AddIdentity<User, IdentityRole>(options =>
 .AddEntityFrameworkStores<AppDbContext>()
 .AddDefaultTokenProviders();
 
-builder.Services.AddServerSideBlazor()
-    .AddHubOptions(options =>
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.Events.OnRedirectToLogin = context =>
     {
-        options.MaximumReceiveMessageSize = 10 * 1024 * 1024;
-    })
-    .AddCircuitOptions(options =>
+        if (context.Request.Path.StartsWithSegments("/chathub"))
+        {
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            return Task.CompletedTask;
+        }
+        context.Response.Redirect(context.RedirectUri);
+        return Task.CompletedTask;
+    };
+
+    options.Events.OnValidatePrincipal = async context =>
     {
-        options.DetailedErrors = true;
-    });
+        await SecurityStampValidator.ValidatePrincipalAsync(context);
+    };
+});
+
+
+builder.Services.AddAuthorization();
+
+builder.Services.AddSignalR(options =>
+{
+    options.MaximumReceiveMessageSize = 10 * 1024 * 1024;
+});
+
+builder.Services.AddResponseCompression(opts =>
+{
+    opts.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(
+        ["application/octet-stream"]);
+});
 
 builder.WebHost.ConfigureKestrel(options =>
 {
     options.Limits.MaxRequestBodySize = 10 * 1024 * 1024;
 });
 
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddRazorPages();
 builder.Services.AddControllers();
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
-
-builder.Services.AddSignalR();
-builder.Services.AddResponseCompression(opts =>
-{
-    opts.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(
-        ["application/octet-stream"]);
-});
 
 builder.Services.AddScoped<SignalRService>();
 builder.Services.AddScoped<UiStateService>();
@@ -73,10 +87,32 @@ builder.Services.AddScoped<VectorService>();
 builder.Services.AddScoped<EmbeddingService>();
 builder.Services.AddScoped<ConversationService>();
 builder.Services.AddScoped<QuestionInteractionService>();
-
 builder.Services.AddHttpClient<EmbeddingService>();
 
 var app = builder.Build();
+
+app.Use(async (context, next) =>
+{
+    try { await next(); }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine($"[MIDDLEWARE ERROR] {ex}");
+        throw;
+    }
+});
+
+app.Use(async (context, next) =>
+{
+    if (context.Request.Path.StartsWithSegments("/chathub"))
+    {
+        var token = context.Request.Query["access_token"];
+        if (!string.IsNullOrEmpty(token))
+        {
+            context.Request.Headers["Authorization"] = "Bearer " + token;
+        }
+    }
+    await next();
+});
 
 if (!app.Environment.IsDevelopment())
 {
@@ -85,29 +121,17 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseResponseCompression();
 app.UseStaticFiles();
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseAntiforgery();
-app.UseResponseCompression();
+app.UseWebSockets(); 
 app.MapHub<ChatHub>("/chathub");
 app.MapControllers();
 app.MapRazorPages();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
-
-app.Use(async (context, next) =>
-{
-    try
-    {
-        await next();
-    }
-    catch (Exception ex)
-    {
-        Console.Error.WriteLine($"[MIDDLEWARE ERROR] {ex}");
-        throw;
-    }
-});
 
 app.Run();

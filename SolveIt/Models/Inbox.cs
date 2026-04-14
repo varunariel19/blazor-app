@@ -15,7 +15,7 @@ namespace SolveIt.Models
         [Required]
         public required string User2Id { get; set; }
 
-
+        public string LastMsgUserId { get; set; } = string.Empty;
 
         [ForeignKey(nameof(User1Id))]
         public User User1 { get; set; } = null!;

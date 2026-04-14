@@ -5,13 +5,21 @@
 @using SolveIt.Components.Modules
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.AspNetCore.Components.Authorization
-@inject SolveIt.UI_state.SignalRService SignalR
+@using Microsoft.AspNetCore.SignalR.Client
 @inject SolveIt.Services.QuestionService questionService
 @inject AuthenticationStateProvider AuthProvider
+@inject SolveIt.Services.SignalRService SignalR
+
 @inject UserManager<User> UserManager
 @inject SolveIt.UI_state.UiStateService UiState
-@inject NavigationManager NavManager
 @inject SolveIt.Services.AuthService authService
+@inject SolveIt.Services.ConversationService conversationService
+
+@using System.Net
+@inject IHttpContextAccessor HttpContextAccessor
+@inject NavigationManager NavManager
+@implements IAsyncDisposable
+
 
 <div class="app-wrapper">
 
@@ -111,7 +119,7 @@
                     <polyline points="22,6 12,13 2,6" />
                 </svg>
 
-                <InboxDilog Messages="@myMessages" FilterLabel="ALL" OnMessageClicked="HandleMessageClick" />
+                <InboxDilog FilterLabel="ALL" OnMessageClicked="HandleMessageClick" /> 
 
 
             </button>
@@ -239,6 +247,7 @@
 </div>
 
 
+
 @code {
 
     #region Variables
@@ -255,14 +264,9 @@
     private bool isSearching = false;
 
     private CancellationTokenSource? _debounceToken;
+    private HubConnection? hubConnection;
 
-    private bool _inboxInitialized = false;
-    private string _currentUserId = string.Empty;
-
-    private List<InboxDilog.InboxMessage> myMessages = new();
-    private bool _initialized = false;
-    private bool _isInitializing = false;
-    private CancellationTokenSource? _initializationToken;
+    private bool _isFirstRender = true;
 
     #endregion
 
@@ -271,41 +275,25 @@
 
     protected override async Task OnInitializedAsync()
     {
-        if (_initialized || _isInitializing)
-            return;
-
-        _isInitializing = true;
-        _initialized = true;
-        _initializationToken = new CancellationTokenSource();
-
         UiState.OnChange += HandleStateChange;
-        UiState.OnUserLoaded += InitializeInbox;
 
-        try
-        {
-            await LoadHotQuestions();
-            await LoadUserIntoState();
+        await LoadHotQuestions();
+        await LoadUserIntoState();
+        await LoadAllInboxes(UiState.UserData!.Id);
+        await SignalR.StartConnectionAsync();
 
-            await InvokeAsync(StateHasChanged);
-        }
-        finally
-        {
-            _isInitializing = false;
-        }
     }
 
-    private async Task InitializeInbox()
+    protected override Task OnAfterRenderAsync(bool firstRender)
     {
-        if (_inboxInitialized || UiState.UserData == null)
-            return;
+        if (!firstRender) return Task.CompletedTask;
+        _isFirstRender = false;
 
-        _inboxInitialized = true;
-        _currentUserId = UiState.UserData.Id;
-
-
-        await SignalR.StartAsync();
-        await Task.CompletedTask;
+        return Task.CompletedTask;
     }
+
+
+
 
     #endregion
 
@@ -314,9 +302,6 @@
 
     private void HandleStateChange()
     {
-        if (_isInitializing)
-            return;
-
         InvokeAsync(StateHasChanged);
     }
 
@@ -329,9 +314,9 @@
         {
             var user = await authService.GetCurrentUserAsync();
 
-            if (user != null && !UiState.IsLoggedIn)
+            if (user != null)
             {
-                UiState.HandleUserLogin(user);
+                await UiState.HandleUserLogin(user);
             }
         }
         catch (Exception ex)
@@ -375,9 +360,7 @@
                 var results = await questionService.SearchQuestionAsync(searchedValue);
 
                 if (!searchResults.SequenceEqual(results))
-                {
                     searchResults = results;
-                }
 
                 isSearching = false;
             }
@@ -389,9 +372,7 @@
 
             await InvokeAsync(StateHasChanged);
         }
-        catch (TaskCanceledException)
-        {
-        }
+        catch (TaskCanceledException) { }
     }
 
     public async Task HandleSearchQuestion()
@@ -401,9 +382,7 @@
         isSearching = true;
         showDropdown = true;
 
-        var questions = await questionService.SearchQuestionAsync(searchedValue);
-
-        searchResults = questions;
+        searchResults = await questionService.SearchQuestionAsync(searchedValue);
         isSearching = false;
 
         await InvokeAsync(StateHasChanged);
@@ -415,12 +394,8 @@
         takeLimit = viewResult ? searchResults.Count : 3;
     }
 
-    private string GetFooterText()
-    {
-        return viewResult
-        ? "Hide results"
-        : $"View all {searchResults.Count} results →";
-    }
+    private string GetFooterText() =>
+        viewResult ? "Hide results" : $"View all {searchResults.Count} results →";
 
     #endregion
 
@@ -438,9 +413,7 @@
         var hotQuestions = await questionService.GetHotQuestionAsync();
 
         if (hotQuestions != null && !hotQuesRes.SequenceEqual(hotQuestions))
-        {
             hotQuesRes = hotQuestions;
-        }
     }
 
     #endregion
@@ -448,12 +421,14 @@
 
     #region Inbox
 
-    public void ToggleInbox()
-    {
-    }
+    public void ToggleInbox() { }
 
-    void HandleMessageClick(InboxDilog.InboxMessage msg)
+    void HandleMessageClick(ConversationService.InboxMessage msg) { }
+
+    public async Task LoadAllInboxes(string Id)
     {
+        var res = await conversationService.LoadUserInboxesAsync(Id);
+        UiState.SetInbox(res);
     }
 
     #endregion
@@ -461,19 +436,16 @@
 
     #region Dispose
 
-    public async Task Dispose()
+    public ValueTask DisposeAsync()
     {
         UiState.OnChange -= HandleStateChange;
-        UiState.OnUserLoaded -= InitializeInbox;
 
         _debounceToken?.Cancel();
         _debounceToken?.Dispose();
 
-        _initializationToken?.Cancel();
-        _initializationToken?.Dispose();
-
-        await SignalR.DisposeAsync();
+        return ValueTask.CompletedTask;
     }
 
     #endregion
 }
+

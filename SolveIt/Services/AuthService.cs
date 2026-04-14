@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Identity;
 using SolveIt.Models;
 using Microsoft.EntityFrameworkCore;
 using SolveIt.Data;
-using System.Text.RegularExpressions;
 
 namespace SolveIt.Services;
 

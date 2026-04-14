@@ -2,7 +2,6 @@
 @inject NavigationManager NavManager
 @inject SolveIt.UI_state.UiStateService UiState
 @inject SolveIt.Services.ConversationService ConversationService
-@inject SolveIt.UI_state.SignalRService SignalR
 @inject IJSRuntime JS
 
 
@@ -287,8 +286,7 @@
 
 
 @code {
-    [Parameter] public Guid InboxId { get; set; } = Guid.Empty;
-    [Parameter] public string ReceiverId { get; set; } = string.Empty;
+    [Parameter] public ConversationService.OpenedUserChat? SelectedUser { get; set; } = null;
     [Parameter] public List<ConversationService.ConversationDto> Conversations { get; set; } = [];
 
     private string _currentUserId = string.Empty;
@@ -322,40 +320,66 @@
         Conversations.Clear();
     }
 
-    protected override void OnInitialized()
-    {
-
-        // get all the message of that user where I am the receiver . 
-
-    }
 
     private async Task SendMessage()
     {
         var text = _draft.Trim();
-        if (string.IsNullOrWhiteSpace(text)) return;
+
+        if (string.IsNullOrWhiteSpace(text) || SelectedUser == null) return;
 
         var message = new ConversationService.ConversationDto(
             ConversationId: Guid.NewGuid(),
-            InboxId:InboxId,
+            InboxId: SelectedUser.InboxId,
             SenderId: _currentUserId,
-            ReceiverId: ReceiverId,
+            ReceiverId: SelectedUser.UserId,
             Content: text,
             SendedAt: DateTime.Now,
             Seen: false,
-            Sender: new InboxDilog.UserSummaryDto(
+            Sender: new ConversationService.UserSummaryDto(
                 AvatarUrl: UiState.UserData!.AvatarUrl ?? string.Empty,
                 DisplayName: UiState.UserData!.DisplayName ?? string.Empty
             ),
-            Receiver: new InboxDilog.UserSummaryDto(
-                AvatarUrl:  string.Empty,
-                DisplayName:  string.Empty
+            Receiver: new ConversationService.UserSummaryDto(
+                AvatarUrl:  SelectedUser.AvatarUrl ?? string.Empty,
+                DisplayName:  SelectedUser.Username ?? string.Empty
             )
         );
+
+        if(Conversations.Count == 0 )
+        {
+            bool exists = UiState.InboxMessages.Any(m => m.InboxId == message.InboxId);
+
+            if (!exists)
+            {
+                var newInbox = new ConversationService.InboxMessage
+                    {
+                        InboxId = message.InboxId,
+                        LastMsgUserId = _currentUserId,
+                        RecentMessage = message.Content,
+                        User = new ConversationService.UserInboxDetails
+                        {
+                            UserId = message.ReceiverId,
+                            Username = SelectedUser.Username ?? string.Empty,
+                            AvatarUrl = SelectedUser.AvatarUrl ?? string.Empty
+                        }
+                    };
+                UiState.ArrangeOrInsertInboxItem(newInbox);
+            }
+        }
 
         Conversations.Add(message);
         _draft = string.Empty;
 
         await ConversationService.SendMessageAsync(message);
+        var existingMsg = UiState.InboxMessages.FirstOrDefault(m => m.InboxId == message.InboxId);
+        if (existingMsg != null)
+        {
+            existingMsg.LastMsgUserId = _currentUserId;
+            existingMsg.RecentMessage = message.Content;
+            existingMsg.ReceivedAt = message.SendedAt;
+            existingMsg.IsRead = true;
+            UiState.ArrangeOrInsertInboxItem(existingMsg);
+        }
     }
 
 
